@@ -1,0 +1,193 @@
+"""
+Serializers for jobs app.
+"""
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from .models import Job, Category, Application
+
+User = get_user_model()
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    """Serializer for Category model."""
+    children = serializers.SerializerMethodField()
+    job_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Category
+        fields = (
+            'id', 'name', 'description', 'parent', 'slug',
+            'children', 'job_count', 'created_at', 'updated_at'
+        )
+        read_only_fields = ('id', 'created_at', 'updated_at')
+    
+    def get_children(self, obj):
+        """Get child categories."""
+        children = obj.children.all()
+        return CategorySerializer(children, many=True).data if children.exists() else []
+    
+    def get_job_count(self, obj):
+        """Get count of active jobs in this category."""
+        return obj.jobs.filter(status='active').count()
+
+
+class JobListSerializer(serializers.ModelSerializer):
+    """Serializer for listing jobs (lightweight)."""
+    category = CategorySerializer(read_only=True)
+    employer = serializers.SerializerMethodField()
+    application_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Job
+        fields = (
+            'id', 'title', 'description', 'category', 'employer',
+            'location', 'job_type', 'salary_min', 'salary_max',
+            'status', 'is_featured', 'views_count', 'application_count',
+            'created_at', 'updated_at'
+        )
+        read_only_fields = ('id', 'created_at', 'updated_at', 'views_count')
+    
+    def get_employer(self, obj):
+        """Get employer information."""
+        return {
+            'id': obj.employer.id,
+            'username': obj.employer.username,
+            'email': obj.employer.email
+        }
+    
+    def get_application_count(self, obj):
+        """Get count of applications for this job."""
+        return obj.applications.count()
+
+
+class JobDetailSerializer(serializers.ModelSerializer):
+    """Serializer for job details (full information)."""
+    category = CategorySerializer(read_only=True)
+    employer = serializers.SerializerMethodField()
+    application_count = serializers.SerializerMethodField()
+    has_applied = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Job
+        fields = (
+            'id', 'title', 'description', 'requirements', 'category',
+            'employer', 'location', 'job_type', 'salary_min', 'salary_max',
+            'status', 'application_deadline', 'is_featured', 'views_count',
+            'application_count', 'has_applied', 'created_at', 'updated_at'
+        )
+        read_only_fields = (
+            'id', 'created_at', 'updated_at', 'views_count',
+            'application_count', 'has_applied'
+        )
+    
+    def get_employer(self, obj):
+        """Get employer information."""
+        return {
+            'id': obj.employer.id,
+            'username': obj.employer.username,
+            'email': obj.employer.email
+        }
+    
+    def get_application_count(self, obj):
+        """Get count of applications for this job."""
+        return obj.applications.count()
+    
+    def get_has_applied(self, obj):
+        """Check if current user has applied for this job."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.applications.filter(applicant=request.user).exists()
+        return False
+
+
+class JobCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating jobs."""
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    
+    class Meta:
+        model = Job
+        fields = (
+            'title', 'description', 'requirements', 'category',
+            'location', 'job_type', 'salary_min', 'salary_max',
+            'status', 'application_deadline', 'is_featured'
+        )
+    
+    def validate(self, attrs):
+        """Validate job data."""
+        salary_min = attrs.get('salary_min')
+        salary_max = attrs.get('salary_max')
+        
+        if salary_min and salary_max and salary_min > salary_max:
+            raise serializers.ValidationError({
+                'salary_max': 'Maximum salary must be greater than minimum salary.'
+            })
+        
+        return attrs
+    
+    def create(self, validated_data):
+        """Create a new job."""
+        validated_data['employer'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class ApplicationSerializer(serializers.ModelSerializer):
+    """Serializer for Application model."""
+    job = JobListSerializer(read_only=True)
+    job_id = serializers.PrimaryKeyRelatedField(
+        queryset=Job.objects.filter(status='active'),
+        source='job',
+        write_only=True
+    )
+    applicant = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Application
+        fields = (
+            'id', 'job', 'job_id', 'applicant', 'cover_letter',
+            'resume', 'status', 'applied_at', 'reviewed_at', 'notes'
+        )
+        read_only_fields = (
+            'id', 'applicant', 'applied_at', 'reviewed_at', 'status'
+        )
+    
+    def get_applicant(self, obj):
+        """Get applicant information."""
+        return {
+            'id': obj.applicant.id,
+            'username': obj.applicant.username,
+            'email': obj.applicant.email
+        }
+    
+    def validate(self, attrs):
+        """Validate application data."""
+        request = self.context.get('request')
+        job = attrs.get('job')
+        
+        # Check if user already applied
+        if request and request.user.is_authenticated:
+            if Application.objects.filter(job=job, applicant=request.user).exists():
+                raise serializers.ValidationError({
+                    'job': 'You have already applied for this job.'
+                })
+        
+        return attrs
+    
+    def create(self, validated_data):
+        """Create a new application."""
+        validated_data['applicant'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class ApplicationUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating application status (employer/admin only)."""
+    class Meta:
+        model = Application
+        fields = ('status', 'notes', 'reviewed_at')
+    
+    def update(self, instance, validated_data):
+        """Update application and set reviewed_at if status changes."""
+        if 'status' in validated_data and instance.status != validated_data['status']:
+            from django.utils import timezone
+            validated_data['reviewed_at'] = timezone.now()
+        return super().update(instance, validated_data)
+
