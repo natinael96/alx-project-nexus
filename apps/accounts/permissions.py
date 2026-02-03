@@ -27,8 +27,15 @@ class IsEmployerOrAdmin(permissions.BasePermission):
 class IsOwnerOrAdmin(permissions.BasePermission):
     """
     Permission check for object owner or admin.
+    
+    Security: Checks authentication before accessing user properties
+    to prevent AttributeError and ensure proper authorization.
     """
     def has_object_permission(self, request, view, obj):
+        # Check authentication first
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
         # Admin can do anything
         if request.user.is_admin:
             return True

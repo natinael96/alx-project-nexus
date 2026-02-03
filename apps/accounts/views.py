@@ -243,22 +243,185 @@ def change_password(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'role',
+            openapi.IN_QUERY,
+            description='Filter users by role (admin, employer, user)',
+            type=openapi.TYPE_STRING,
+            enum=['admin', 'employer', 'user']
+        ),
+        openapi.Parameter(
+            'search',
+            openapi.IN_QUERY,
+            description='Search users by username, email, or full name',
+            type=openapi.TYPE_STRING
+        ),
+        openapi.Parameter(
+            'is_active',
+            openapi.IN_QUERY,
+            description='Filter by active status (true/false)',
+            type=openapi.TYPE_BOOLEAN
+        ),
+    ],
+    responses={
+        200: UserSerializer(many=True),
+        401: 'Unauthorized',
+        403: 'Forbidden - Admin access required'
+    },
+    operation_summary='List all users',
+    operation_description='Get a paginated list of all users. Admin only. Supports filtering by role, search, and active status.'
+)
 class UserListAPIView(generics.ListAPIView):
-    """List all users (Admin only)."""
+    """
+    List all users (Admin only).
+    
+    Features:
+    - Filter by role
+    - Search by username, email, or name
+    - Filter by active status
+    - Paginated results
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
     
     def get_queryset(self):
+        """Filter queryset based on query parameters."""
         queryset = super().get_queryset()
+        
+        # Filter by role
         role = self.request.query_params.get('role', None)
         if role:
-            queryset = queryset.filter(role=role)
-        return queryset
+            if role in ['admin', 'employer', 'user']:
+                queryset = queryset.filter(role=role)
+        
+        # Filter by active status
+        is_active = self.request.query_params.get('is_active', None)
+        if is_active is not None:
+            is_active_bool = is_active.lower() in ('true', '1', 'yes')
+            queryset = queryset.filter(is_active=is_active_bool)
+        
+        # Search functionality
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                models.Q(username__icontains=search) |
+                models.Q(email__icontains=search) |
+                models.Q(first_name__icontains=search) |
+                models.Q(last_name__icontains=search)
+            )
+        
+        return queryset.select_related().order_by('-date_joined')
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: UserSerializer,
+        401: 'Unauthorized',
+        403: 'Forbidden - Admin access required',
+        404: 'User not found'
+    },
+    operation_summary='Get user details',
+    operation_description='Retrieve detailed information about a specific user. Admin only.'
+)
+@swagger_auto_schema(
+    method='put',
+    request_body=UserSerializer,
+    responses={
+        200: UserSerializer,
+        400: 'Bad Request',
+        401: 'Unauthorized',
+        403: 'Forbidden - Admin access required',
+        404: 'User not found'
+    },
+    operation_summary='Update user',
+    operation_description='Update user information. Admin only. Can change roles, activate/deactivate users.'
+)
+@swagger_auto_schema(
+    method='delete',
+    responses={
+        204: 'User deleted successfully',
+        401: 'Unauthorized',
+        403: 'Forbidden - Admin access required',
+        404: 'User not found',
+        400: 'Cannot delete user (e.g., last admin or self-deletion)'
+    },
+    operation_summary='Delete user',
+    operation_description='Delete a user account. Admin only. Prevents deletion of last admin and self-deletion.'
+)
 class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update, or delete a user (Admin only)."""
+    """
+    Retrieve, update, or delete a user (Admin only).
+    
+    Security Features:
+    - Prevents self-deletion
+    - Prevents deleting the last admin
+    - Validates role changes
+    - Email uniqueness validation
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related()
+    
+    def update(self, request, *args, **kwargs):
+        """Update user with additional security checks."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Additional validation for admin operations
+        validated_data = serializer.validated_data
+        
+        # Prevent admins from demoting themselves
+        if 'role' in validated_data:
+            if instance == request.user and validated_data['role'] != 'admin':
+                return Response(
+                    {'role': 'You cannot change your own role from admin.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Prevent deactivating yourself
+        if 'is_active' in validated_data:
+            if instance == request.user and validated_data['is_active'] is False:
+                return Response(
+                    {'is_active': 'You cannot deactivate your own account.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete user with security checks."""
+        instance = self.get_object()
+        
+        # Prevent self-deletion
+        if instance == request.user:
+            return Response(
+                {'error': 'You cannot delete your own account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Prevent deleting the last admin
+        if instance.is_admin:
+            admin_count = User.objects.filter(role='admin', is_active=True).count()
+            if admin_count <= 1:
+                return Response(
+                    {'error': 'Cannot delete the last active admin user.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        self.perform_destroy(instance)
+        return Response(
+            {'message': 'User deleted successfully'},
+            status=status.HTTP_204_NO_CONTENT
+        )
