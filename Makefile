@@ -42,8 +42,26 @@ makemigrations: ## Create new migrations
 createsuperuser: ## Create Django superuser
 	docker-compose exec web python manage.py createsuperuser
 
-test: ## Run tests
-	docker-compose exec web python manage.py test
+test: ## Run all tests with pytest
+	docker-compose exec web pytest
+
+test-cov: ## Run tests with coverage report
+	docker-compose exec web pytest --cov=apps --cov-report=html --cov-report=term-missing
+
+test-verbose: ## Run tests with verbose output
+	docker-compose exec web pytest -v
+
+test-accounts: ## Run account tests only
+	docker-compose exec web pytest tests/test_accounts.py -v
+
+test-jobs: ## Run job tests only
+	docker-compose exec web pytest tests/test_jobs.py -v
+
+test-models: ## Run model tests only
+	docker-compose exec web pytest tests/test_models.py -v
+
+test-integration: ## Run integration tests only
+	docker-compose exec web pytest tests/test_integration.py -v
 
 collectstatic: ## Collect static files
 	docker-compose exec web python manage.py collectstatic --noinput
