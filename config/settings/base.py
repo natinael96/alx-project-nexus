@@ -75,6 +75,13 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default='jobboard_password'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
+        # Connection settings
+        'CONN_MAX_AGE': 0,  # Override in production for connection pooling
+        'OPTIONS': {
+            'connect_timeout': 10,
+        },
+        # Transaction settings
+        'ATOMIC_REQUESTS': False,  # Set per-view transaction handling
     }
 }
 
@@ -155,12 +162,38 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:8000'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() 
+    for origin in config(
+        'CORS_ALLOWED_ORIGINS',
+        default='http://localhost:3000,http://localhost:8000'
+    ).split(',')
+    if origin.strip()  # Filter out empty strings
+]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# CORS additional settings
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Swagger/OpenAPI Settings
 SWAGGER_SETTINGS = {

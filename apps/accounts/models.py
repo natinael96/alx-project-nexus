@@ -53,6 +53,7 @@ class User(AbstractUser):
         db_table = 'users'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
+        ordering = ['-date_joined']  # Newest users first by default
         indexes = [
             models.Index(fields=['role', 'is_active']),
             models.Index(fields=['email']),

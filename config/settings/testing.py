@@ -15,7 +15,12 @@ DATABASES = {
 }
 
 # Disable migrations during testing for speed
+# This speeds up tests by using the current state of models directly
 class DisableMigrations:
+    """
+    Disable migrations during testing to speed up test execution.
+    Tests will use the current state of models directly.
+    """
     def __contains__(self, item):
         return True
     

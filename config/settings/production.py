@@ -19,6 +19,18 @@ SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, ca
 SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
 X_FRAME_OPTIONS = 'DENY'
 
+# HSTS (HTTP Strict Transport Security) settings
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)
+
+# Referrer Policy
+SECURE_REFERRER_POLICY = config('SECURE_REFERRER_POLICY', default='strict-origin-when-cross-origin')
+
+# Proxy SSL Header (if behind reverse proxy like nginx)
+# Uncomment and configure if using a reverse proxy
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Email configuration
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
@@ -40,7 +52,8 @@ CORS_ALLOWED_ORIGINS = config(
 
 # Database connection pooling for production
 DATABASES['default'].update({
-    'CONN_MAX_AGE': 600,
+    'CONN_MAX_AGE': 600,  # 10 minutes connection pooling
+    'ATOMIC_REQUESTS': False,  # Set to True if you want each view to be wrapped in a transaction
     'OPTIONS': {
         'connect_timeout': 10,
         'options': '-c statement_timeout=30000'

@@ -1,12 +1,20 @@
 #!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
+"""
+Django's command-line utility for administrative tasks.
+
+This script allows you to perform administrative tasks for the Job Board Platform.
+"""
 import os
 import sys
 
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
+    # Allow override via environment variable, default to development
+    os.environ.setdefault(
+        'DJANGO_SETTINGS_MODULE',
+        os.getenv('DJANGO_SETTINGS_MODULE', 'config.settings.development')
+    )
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
