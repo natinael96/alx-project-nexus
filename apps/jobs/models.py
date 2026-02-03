@@ -2,10 +2,12 @@
 Models for jobs app - Job, Category, and Application.
 """
 from django.db import models
+from django.db.models import F
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MinValueValidator
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from apps.accounts.models import User
 from apps.core.utils import validate_file_size, validate_file_extension
@@ -176,6 +178,12 @@ class Job(models.Model):
     """
     Job model representing job postings.
     Includes comprehensive job details and status management.
+    
+    Features:
+    - Salary range validation
+    - Application deadline validation
+    - Atomic view count increments
+    - Full-text search optimization
     """
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -191,27 +199,42 @@ class Job(models.Model):
         ('freelance', 'Freelance'),
     ]
     
-    title = models.CharField(max_length=200, db_index=True)
-    description = models.TextField()
-    requirements = models.TextField(help_text='Job requirements and qualifications')
+    title = models.CharField(
+        max_length=200,
+        db_index=True,
+        help_text='Job title'
+    )
+    description = models.TextField(
+        help_text='Full job description'
+    )
+    requirements = models.TextField(
+        help_text='Job requirements and qualifications'
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
         related_name='jobs',
-        db_index=True
+        db_index=True,
+        help_text='Job category'
     )
     employer = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='posted_jobs',
-        db_index=True
+        db_index=True,
+        help_text='Job employer/creator'
     )
-    location = models.CharField(max_length=100, db_index=True)
+    location = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text='Job location'
+    )
     job_type = models.CharField(
         max_length=20,
         choices=JOB_TYPE_CHOICES,
         default='full-time',
-        db_index=True
+        db_index=True,
+        help_text='Type of employment'
     )
     salary_min = models.DecimalField(
         max_digits=10,
@@ -233,11 +256,23 @@ class Job(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default='draft',
-        db_index=True
+        db_index=True,
+        help_text='Job posting status'
     )
-    application_deadline = models.DateField(null=True, blank=True)
-    is_featured = models.BooleanField(default=False, db_index=True)
-    views_count = models.PositiveIntegerField(default=0)
+    application_deadline = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Application deadline date'
+    )
+    is_featured = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='Whether this job is featured'
+    )
+    views_count = models.PositiveIntegerField(
+        default=0,
+        help_text='Number of times this job has been viewed'
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -261,18 +296,65 @@ class Job(models.Model):
         return f"{self.title} - {self.employer.username}"
     
     def get_absolute_url(self):
+        """Return canonical URL for the job."""
         return reverse('job-detail', kwargs={'pk': self.pk})
     
+    def clean(self):
+        """Validate job data."""
+        # Validate salary range
+        if self.salary_min is not None and self.salary_max is not None:
+            if self.salary_min > self.salary_max:
+                raise ValidationError({
+                    'salary_max': 'Maximum salary must be greater than or equal to minimum salary.'
+                })
+        
+        # Validate application deadline is not in the past
+        if self.application_deadline:
+            if self.application_deadline < timezone.now().date():
+                raise ValidationError({
+                    'application_deadline': 'Application deadline cannot be in the past.'
+                })
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
     def increment_views(self):
-        """Increment the view count for this job."""
-        self.views_count += 1
-        self.save(update_fields=['views_count'])
+        """Atomically increment the view count for this job."""
+        # Use F() for atomic update to prevent race conditions
+        Job.objects.filter(pk=self.pk).update(views_count=F('views_count') + 1)
+        # Refresh from database to get updated value
+        self.refresh_from_db()
+    
+    @property
+    def is_accepting_applications(self):
+        """Check if job is currently accepting applications."""
+        if self.status != 'active':
+            return False
+        if self.application_deadline:
+            return self.application_deadline >= timezone.now().date()
+        return True
+    
+    @property
+    def days_until_deadline(self):
+        """Get number of days until application deadline."""
+        if not self.application_deadline:
+            return None
+        delta = self.application_deadline - timezone.now().date()
+        return delta.days if delta.days >= 0 else None
 
 
 class Application(models.Model):
     """
     Application model for job applications.
     Tracks applications submitted by users for jobs.
+    
+    Features:
+    - File validation (size and extension)
+    - Duplicate application prevention
+    - Job status validation
+    - Application deadline validation
     """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -285,31 +367,40 @@ class Application(models.Model):
         Job,
         on_delete=models.CASCADE,
         related_name='applications',
-        db_index=True
+        db_index=True,
+        help_text='Job being applied for'
     )
     applicant = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='job_applications',
-        db_index=True
+        db_index=True,
+        help_text='User applying for the job'
     )
-    cover_letter = models.TextField(help_text='Cover letter for the application')
+    cover_letter = models.TextField(
+        help_text='Cover letter for the application'
+    )
     resume = models.FileField(
         upload_to='resumes/%Y/%m/%d/',
-        help_text='Resume file (PDF, DOC, DOCX)'
+        help_text='Resume file (PDF, DOC, DOCX, max 5MB)'
     )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending',
-        db_index=True
+        db_index=True,
+        help_text='Application status'
     )
     applied_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the application was reviewed'
+    )
     notes = models.TextField(
         blank=True,
         null=True,
-        help_text='Internal notes about the application'
+        help_text='Internal notes about the application (employer/admin only)'
     )
     
     class Meta:
@@ -328,12 +419,11 @@ class Application(models.Model):
         return f"{self.applicant.username} - {self.job.title}"
     
     def get_absolute_url(self):
+        """Return canonical URL for the application."""
         return reverse('application-detail', kwargs={'pk': self.pk})
     
     def clean(self):
         """Validate application data."""
-        from django.core.exceptions import ValidationError
-        
         # Validate resume file
         if self.resume and hasattr(self.resume, 'size'):
             try:
@@ -344,11 +434,31 @@ class Application(models.Model):
         
         # Check if user already applied (only for new applications)
         if self.pk is None and self.job and self.applicant:
+            # Check for duplicate applications
             if Application.objects.filter(job=self.job, applicant=self.applicant).exists():
-                raise ValidationError('You have already applied for this job.')
+                raise ValidationError({
+                    'job': 'You have already applied for this job.'
+                })
+            
+            # Validate job is accepting applications
+            if not self.job.is_accepting_applications:
+                if self.job.status != 'active':
+                    raise ValidationError({
+                        'job': f'Cannot apply to a {self.job.get_status_display().lower()} job.'
+                    })
+                elif self.job.application_deadline and self.job.application_deadline < timezone.now().date():
+                    raise ValidationError({
+                        'job': 'Application deadline has passed.'
+                    })
     
     def save(self, *args, **kwargs):
-        """Override save to run clean validation."""
+        """Override save to run clean validation and update reviewed_at."""
+        # Update reviewed_at when status changes from pending
+        if self.pk:
+            old_instance = Application.objects.get(pk=self.pk)
+            if old_instance.status == 'pending' and self.status != 'pending' and not self.reviewed_at:
+                self.reviewed_at = timezone.now()
+        
         self.full_clean()
         super().save(*args, **kwargs)
 

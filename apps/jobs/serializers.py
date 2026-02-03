@@ -3,6 +3,7 @@ Serializers for jobs app.
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from .models import Job, Category, Application
 
 User = get_user_model()
@@ -181,12 +182,26 @@ class ApplicationSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         job = attrs.get('job')
         
+        if not job:
+            return attrs
+        
         # Check if user already applied
         if request and request.user.is_authenticated:
             if Application.objects.filter(job=job, applicant=request.user).exists():
                 raise serializers.ValidationError({
                     'job': 'You have already applied for this job.'
                 })
+            
+            # Validate job is accepting applications
+            if not job.is_accepting_applications:
+                if job.status != 'active':
+                    raise serializers.ValidationError({
+                        'job': f'Cannot apply to a {job.get_status_display().lower()} job.'
+                    })
+                elif job.application_deadline and job.application_deadline < timezone.now().date():
+                    raise serializers.ValidationError({
+                        'job': 'Application deadline has passed.'
+                    })
         
         return attrs
     
