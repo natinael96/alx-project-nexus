@@ -43,22 +43,52 @@ class JobFilter(django_filters.FilterSet):
         return super().filter_queryset(queryset)
     
     def filter_search(self, queryset, name, value):
-        """Full-text search on title, description, and requirements."""
+        """
+        Full-text search on title, description, and requirements.
+        
+        Security: Uses parameterized queries (Django ORM) to prevent SQL injection.
+        Performance: Uses case-insensitive contains for flexible matching.
+        """
         if value:
+            # Strip and validate search term
+            search_term = value.strip()
+            if len(search_term) < 2:
+                # Too short search terms can be inefficient, but allow them
+                pass
+            
+            # Use Q objects for OR logic (safe from SQL injection)
             return queryset.filter(
-                models.Q(title__icontains=value) |
-                models.Q(description__icontains=value) |
-                models.Q(requirements__icontains=value)
+                models.Q(title__icontains=search_term) |
+                models.Q(description__icontains=search_term) |
+                models.Q(requirements__icontains=search_term) |
+                models.Q(location__icontains=search_term)  # Also search location
             )
         return queryset
 
 
 class ApplicationFilter(django_filters.FilterSet):
-    """Filter set for Application model."""
+    """
+    Filter set for Application model.
+    
+    Security: Filters are applied after role-based queryset filtering.
+    Only shows applications accessible to the current user.
+    """
     status = django_filters.ChoiceFilter(choices=Application.STATUS_CHOICES)
-    job = django_filters.ModelChoiceFilter(queryset=Job.objects.all())
+    job = django_filters.ModelChoiceFilter(
+        queryset=Job.objects.all(),
+        help_text='Filter by job ID'
+    )
     
     class Meta:
         model = Application
         fields = ['status', 'job']
+    
+    def filter_queryset(self, queryset):
+        """
+        Apply filters to queryset.
+        
+        Note: Role-based filtering is handled in the ViewSet's get_queryset method.
+        This filter only applies additional filters on the already-filtered queryset.
+        """
+        return super().filter_queryset(queryset)
 
