@@ -48,35 +48,79 @@ class CategoryViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='List all categories',
-        operation_description='Get a list of all job categories with their children and job counts'
+        operation_description='Get a list of all job categories with their children and job counts. Public read access.',
+        manual_parameters=[
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description='Search categories by name, description, or slug',
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description='Order results by field (name, created_at, -name, -created_at)',
+                type=openapi.TYPE_STRING,
+                enum=['name', 'created_at', '-name', '-created_at']
+            ),
+        ],
+        responses={
+            200: CategorySerializer(many=True),
+            401: 'Unauthorized',
+        }
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Create a new category',
-        operation_description='Create a new job category (Admin only)'
+        operation_description='Create a new job category. Admin only. Validates unique name and slug. Supports parent category assignment for hierarchical structure.',
+        request_body=CategorySerializer,
+        responses={
+            201: CategorySerializer,
+            400: 'Bad Request - Validation errors (e.g., duplicate name, circular reference)',
+            401: 'Unauthorized',
+            403: 'Forbidden - Admin access required',
+        }
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Get category details',
-        operation_description='Get detailed information about a specific category'
+        operation_description='Get detailed information about a specific category including children and job count. Public access.',
+        responses={
+            200: CategorySerializer,
+            404: 'Category not found',
+        }
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Update category',
-        operation_description='Update a category (Admin only)'
+        operation_description='Update a category. Admin only. Supports partial updates (PATCH). Validates circular references and unique constraints.',
+        request_body=CategorySerializer,
+        responses={
+            200: CategorySerializer,
+            400: 'Bad Request - Validation errors',
+            401: 'Unauthorized',
+            403: 'Forbidden - Admin access required',
+            404: 'Category not found',
+        }
     )
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Delete category',
-        operation_description='Delete a category (Admin only)'
+        operation_description='Delete a category. Admin only. Cascade deletes all child categories and associated jobs.',
+        responses={
+            204: 'Category deleted successfully',
+            401: 'Unauthorized',
+            403: 'Forbidden - Admin access required',
+            404: 'Category not found',
+        }
     )
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
@@ -104,7 +148,14 @@ class JobViewSet(viewsets.ModelViewSet):
         return JobDetailSerializer
     
     def get_queryset(self):
-        """Filter queryset based on user permissions and query parameters."""
+        """
+        Filter queryset based on user permissions and query parameters.
+        
+        Security:
+        - Non-authenticated users see only active jobs
+        - Regular users see only active jobs
+        - Employers/admins can see all jobs (filtered by status if requested)
+        """
         queryset = super().get_queryset()
         
         # By default, show only active jobs to non-authenticated users
@@ -127,26 +178,111 @@ class JobViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='List all jobs',
-        operation_description='Get a paginated list of jobs with filtering options'
+        operation_description='Get a paginated list of jobs with advanced filtering and search options. Public access (non-authenticated users see only active jobs).',
+        manual_parameters=[
+            openapi.Parameter(
+                'category',
+                openapi.IN_QUERY,
+                description='Filter by category ID',
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'location',
+                openapi.IN_QUERY,
+                description='Filter by location (case-insensitive partial match)',
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'job_type',
+                openapi.IN_QUERY,
+                description='Filter by job type',
+                type=openapi.TYPE_STRING,
+                enum=['full-time', 'part-time', 'contract', 'internship', 'freelance']
+            ),
+            openapi.Parameter(
+                'status',
+                openapi.IN_QUERY,
+                description='Filter by status (authenticated users only)',
+                type=openapi.TYPE_STRING,
+                enum=['draft', 'active', 'closed']
+            ),
+            openapi.Parameter(
+                'min_salary',
+                openapi.IN_QUERY,
+                description='Filter by minimum salary (greater than or equal)',
+                type=openapi.TYPE_NUMBER
+            ),
+            openapi.Parameter(
+                'max_salary',
+                openapi.IN_QUERY,
+                description='Filter by maximum salary (less than or equal)',
+                type=openapi.TYPE_NUMBER
+            ),
+            openapi.Parameter(
+                'is_featured',
+                openapi.IN_QUERY,
+                description='Filter featured jobs (true/false)',
+                type=openapi.TYPE_BOOLEAN
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description='Full-text search in title, description, and requirements',
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description='Order results by field (created_at, salary_min, salary_max, views_count). Prefix with - for descending.',
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description='Page number for pagination',
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'page_size',
+                openapi.IN_QUERY,
+                description='Number of items per page (max 100)',
+                type=openapi.TYPE_INTEGER
+            ),
+        ],
+        responses={
+            200: JobListSerializer(many=True),
+            401: 'Unauthorized',
+        }
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Get job details',
-        operation_description='Get detailed information about a specific job'
+        operation_description='Get detailed information about a specific job. Automatically increments view count. Public access for active jobs.',
+        responses={
+            200: JobDetailSerializer,
+            401: 'Unauthorized',
+            404: 'Job not found',
+        }
     )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Increment view count
+        # Increment view count atomically
         instance.increment_views()
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
     
     @swagger_auto_schema(
         operation_summary='Create a new job',
-        operation_description='Create a new job posting (Employer/Admin only)',
-        request_body=JobCreateUpdateSerializer
+        operation_description='Create a new job posting. Employer/Admin only. Validates salary range (min <= max) and application deadline. Automatically sets employer to current user.',
+        request_body=JobCreateUpdateSerializer,
+        responses={
+            201: JobDetailSerializer,
+            400: 'Bad Request - Validation errors',
+            401: 'Unauthorized',
+            403: 'Forbidden - Employer/Admin access required',
+        }
     )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -161,8 +297,15 @@ class JobViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='Update job',
-        operation_description='Update a job posting (Owner/Admin only)',
-        request_body=JobCreateUpdateSerializer
+        operation_description='Update a job posting. Job owner/Admin only. Supports partial updates (PATCH). Validates data before saving.',
+        request_body=JobCreateUpdateSerializer,
+        responses={
+            200: JobDetailSerializer,
+            400: 'Bad Request - Validation errors',
+            401: 'Unauthorized',
+            403: 'Forbidden - Job owner/Admin access required',
+            404: 'Job not found',
+        }
     )
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -174,7 +317,13 @@ class JobViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='Delete job',
-        operation_description='Delete a job posting (Owner/Admin only)'
+        operation_description='Delete a job posting. Job owner/Admin only. Cascade deletes all associated applications.',
+        responses={
+            204: 'Job deleted successfully',
+            401: 'Unauthorized',
+            403: 'Forbidden - Job owner/Admin access required',
+            404: 'Job not found',
+        }
     )
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
@@ -182,7 +331,10 @@ class JobViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         method='get',
         operation_summary='Get featured jobs',
-        operation_description='Get a list of featured/active jobs'
+        operation_description='Get a list of top 10 featured active jobs. Public access. No pagination (limited results).',
+        responses={
+            200: JobListSerializer(many=True),
+        }
     )
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def featured(self, request):

@@ -7,7 +7,12 @@ from .models import Job, Category, Application
 
 
 class JobFilter(django_filters.FilterSet):
-    """Filter set for Job model."""
+    """
+    Filter set for Job model.
+    
+    Security: Status filtering is restricted to authenticated users only.
+    Non-authenticated users can only see active jobs.
+    """
     category = django_filters.ModelChoiceFilter(queryset=Category.objects.all())
     location = django_filters.CharFilter(lookup_expr='icontains')
     job_type = django_filters.ChoiceFilter(choices=Job.JOB_TYPE_CHOICES)
@@ -21,8 +26,24 @@ class JobFilter(django_filters.FilterSet):
         model = Job
         fields = ['category', 'location', 'job_type', 'status', 'is_featured']
     
+    def filter_queryset(self, queryset):
+        """Override to enforce security on status filtering."""
+        # Get the request from the view
+        request = getattr(self, 'request', None)
+        
+        # If no request or user is not authenticated, force status='active'
+        if not request or not request.user.is_authenticated:
+            # Remove status from filters if present
+            if 'status' in self.form.cleaned_data:
+                self.form.cleaned_data.pop('status')
+            # Force active status for non-authenticated users
+            queryset = queryset.filter(status='active')
+        
+        # Apply other filters
+        return super().filter_queryset(queryset)
+    
     def filter_search(self, queryset, name, value):
-        """Full-text search on title and description."""
+        """Full-text search on title, description, and requirements."""
         if value:
             return queryset.filter(
                 models.Q(title__icontains=value) |
