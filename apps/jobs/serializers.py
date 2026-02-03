@@ -12,14 +12,20 @@ class CategorySerializer(serializers.ModelSerializer):
     """Serializer for Category model."""
     children = serializers.SerializerMethodField()
     job_count = serializers.SerializerMethodField()
+    full_path = serializers.SerializerMethodField()
+    depth = serializers.ReadOnlyField()
     
     class Meta:
         model = Category
         fields = (
             'id', 'name', 'description', 'parent', 'slug',
-            'children', 'job_count', 'created_at', 'updated_at'
+            'children', 'job_count', 'full_path', 'depth',
+            'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'slug', 'created_at', 'updated_at', 'depth')
+        extra_kwargs = {
+            'name': {'required': True},
+        }
     
     def get_children(self, obj):
         """Get child categories."""
@@ -29,6 +35,18 @@ class CategorySerializer(serializers.ModelSerializer):
     def get_job_count(self, obj):
         """Get count of active jobs in this category."""
         return obj.jobs.filter(status='active').count()
+    
+    def get_full_path(self, obj):
+        """Get full hierarchical path."""
+        return obj.get_full_path()
+    
+    def validate_parent(self, value):
+        """Validate parent category."""
+        if value:
+            # Prevent setting parent to self (will be caught in model clean, but check here too)
+            if self.instance and value.pk == self.instance.pk:
+                raise serializers.ValidationError('A category cannot be its own parent.')
+        return value
 
 
 class JobListSerializer(serializers.ModelSerializer):

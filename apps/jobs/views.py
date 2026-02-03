@@ -27,14 +27,24 @@ class CategoryViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Category model.
     Admin can create/update/delete, everyone can view.
+    
+    Features:
+    - Hierarchical category structure
+    - Automatic slug generation
+    - Circular reference prevention
+    - SEO-friendly category paths
     """
-    queryset = Category.objects.all()
+    queryset = Category.objects.select_related('parent').prefetch_related('children')
     serializer_class = CategorySerializer
     permission_classes = [CanManageCategory]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
+    search_fields = ['name', 'description', 'slug']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related for parent."""
+        return super().get_queryset().select_related('parent')
     
     @swagger_auto_schema(
         operation_summary='List all categories',
