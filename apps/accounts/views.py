@@ -26,12 +26,21 @@ from .permissions import IsAdminUser
         400: 'Bad Request'
     },
     operation_summary='Register a new user',
-    operation_description='Create a new user account with role-based access (admin, employer, user)'
+    operation_description='Create a new user account with role-based access (admin, employer, user). Passwords are validated for strength.'
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
-    """Register a new user."""
+    """
+    Register a new user.
+    
+    Security Features:
+    - Password strength validation
+    - Email uniqueness check
+    - Username format validation
+    - Prevents admin role registration
+    - Passwords are hashed using Django's PBKDF2
+    """
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
@@ -61,12 +70,20 @@ def register_user(request):
         401: 'Unauthorized'
     },
     operation_summary='User login',
-    operation_description='Authenticate user and return JWT tokens'
+    operation_description='Authenticate user and return JWT tokens. Uses generic error messages to prevent user enumeration.'
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_user(request):
-    """Login user and return JWT tokens."""
+    """
+    Login user and return JWT tokens.
+    
+    Security Features:
+    - Generic error messages to prevent user enumeration
+    - Checks if user account is active
+    - Returns JWT access and refresh tokens
+    - Updates last login timestamp
+    """
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
@@ -95,27 +112,35 @@ def login_user(request):
         400: 'Bad Request'
     },
     operation_summary='Refresh access token',
-    operation_description='Get a new access token using refresh token'
+    operation_description='Get a new access token using refresh token. Invalid tokens return generic error messages.'
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def refresh_token(request):
-    """Refresh access token."""
-    refresh_token = request.data.get('refresh')
-    if not refresh_token:
+    """
+    Refresh access token.
+    
+    Security: Validates refresh token and returns new access token.
+    Invalid or expired tokens return generic error message.
+    """
+    refresh_token_value = request.data.get('refresh')
+    if not refresh_token_value:
         return Response(
             {'error': 'Refresh token is required'},
             status=status.HTTP_400_BAD_REQUEST
         )
     
     try:
-        token = RefreshToken(refresh_token)
+        token = RefreshToken(refresh_token_value)
+        # Verify token type and expiration
+        token.verify()
         return Response({
             'access': str(token.access_token)
         }, status=status.HTTP_200_OK)
-    except Exception as e:
+    except Exception:
+        # Generic error message to prevent token enumeration
         return Response(
-            {'error': 'Invalid refresh token'},
+            {'error': 'Invalid or expired refresh token. Please login again.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -146,12 +171,17 @@ def get_current_user(request):
         401: 'Unauthorized'
     },
     operation_summary='Update current user',
-    operation_description='Update the currently authenticated user profile'
+    operation_description='Update the currently authenticated user profile. Role changes are restricted to admins only.'
 )
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def update_current_user(request):
-    """Update current authenticated user."""
+    """
+    Update current authenticated user.
+    
+    Security: Users cannot change their role unless they are admin.
+    Email uniqueness is validated.
+    """
     serializer = UserSerializer(
         request.user,
         data=request.data,
@@ -172,12 +202,23 @@ def update_current_user(request):
         401: 'Unauthorized'
     },
     operation_summary='Change password',
-    operation_description='Change the password for the currently authenticated user'
+    operation_description='Change the password for the currently authenticated user. All existing tokens should be invalidated after password change.'
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password(request):
-    """Change user password."""
+    """
+    Change user password.
+    
+    Security Features:
+    - Validates old password
+    - Uses Django password validators for new password
+    - Password confirmation check
+    - Note: In production, consider invalidating all existing tokens
+    
+    Security Note: After password change, all existing JWT tokens should be invalidated.
+    User must login again to get new tokens.
+    """
     serializer = ChangePasswordSerializer(
         data=request.data,
         context={'request': request}
@@ -185,9 +226,18 @@ def change_password(request):
     if serializer.is_valid():
         user = request.user
         user.set_password(serializer.validated_data['new_password'])
-        user.save()
+        user.save(update_fields=['password'])
+        
+        # Note: In a production system, you might want to blacklist all tokens here
+        # This requires django-rest-framework-simplejwt[blacklist] to be installed
+        # Example:
+        # from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+        # OutstandingToken.objects.filter(user=user).delete()
+        
         return Response(
-            {'message': 'Password changed successfully'},
+            {
+                'message': 'Password changed successfully. Please login again with your new password.'
+            },
             status=status.HTTP_200_OK
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -212,4 +262,3 @@ class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
-
