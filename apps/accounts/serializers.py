@@ -9,20 +9,30 @@ from .models import User
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Serializer for user registration."""
+    """
+    Serializer for user registration.
+    
+    Security Features:
+    - Password strength validation using Django validators
+    - Password confirmation matching
+    - Email and username uniqueness validation
+    - Prevents admin role registration
+    - Password excluded from response
+    """
     password = serializers.CharField(
         write_only=True,
         required=True,
         validators=[validate_password],
         style={'input_type': 'password'},
         min_length=8,
-        help_text='Password must be at least 8 characters long'
+        help_text='Password must be at least 8 characters long and meet complexity requirements'
     )
     password2 = serializers.CharField(
         write_only=True,
         required=True,
         style={'input_type': 'password'},
-        label='Confirm Password'
+        label='Confirm Password',
+        help_text='Re-enter your password to confirm'
     )
     
     class Meta:
@@ -78,7 +88,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for user details."""
+    """
+    Serializer for user details.
+    
+    Security: Prevents unauthorized role changes and email conflicts.
+    Includes computed full_name field for convenience.
+    """
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     
     class Meta:
@@ -89,13 +104,37 @@ class UserSerializer(serializers.ModelSerializer):
             'bio', 'date_joined', 'last_login'
         )
         read_only_fields = ('id', 'date_joined', 'last_login')
+        extra_kwargs = {
+            'username': {'read_only': False},  # Allow updates but validate uniqueness
+            'email': {'required': True},
+        }
     
     def validate_email(self, value):
         """Validate email uniqueness on update."""
+        if not value:
+            raise serializers.ValidationError('Email is required.')
+        
         user = self.instance
-        if user and User.objects.filter(email=value).exclude(pk=user.pk).exists():
+        if user and User.objects.filter(email__iexact=value).exclude(pk=user.pk).exists():
             raise serializers.ValidationError('A user with this email already exists.')
-        return value.lower().strip() if value else value
+        return value.lower().strip()
+    
+    def validate_username(self, value):
+        """Validate username uniqueness on update."""
+        if not value:
+            raise serializers.ValidationError('Username is required.')
+        
+        user = self.instance
+        if user and User.objects.filter(username__iexact=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError('A user with this username already exists.')
+        
+        # Validate username format
+        if len(value) < 3:
+            raise serializers.ValidationError('Username must be at least 3 characters long.')
+        if not value.replace('_', '').replace('.', '').isalnum():
+            raise serializers.ValidationError('Username can only contain letters, numbers, underscores, and dots.')
+        
+        return value.lower().strip()
     
     def validate_role(self, value):
         """Prevent non-admin users from changing their role."""

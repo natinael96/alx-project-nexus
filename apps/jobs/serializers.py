@@ -120,7 +120,12 @@ class JobDetailSerializer(serializers.ModelSerializer):
 
 
 class JobCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating jobs."""
+    """
+    Serializer for creating/updating jobs.
+    
+    Security: Validates salary range, application deadline, and required fields.
+    Automatically sets employer to current user on creation.
+    """
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     
     class Meta:
@@ -130,32 +135,64 @@ class JobCreateUpdateSerializer(serializers.ModelSerializer):
             'location', 'job_type', 'salary_min', 'salary_max',
             'status', 'application_deadline', 'is_featured'
         )
+        extra_kwargs = {
+            'title': {'required': True, 'max_length': 200},
+            'description': {'required': True},
+            'requirements': {'required': True},
+            'category': {'required': True},
+            'location': {'required': True, 'max_length': 100},
+        }
+    
+    def validate_application_deadline(self, value):
+        """Validate application deadline is not in the past."""
+        if value and value < timezone.now().date():
+            raise serializers.ValidationError(
+                'Application deadline cannot be in the past.'
+            )
+        return value
     
     def validate(self, attrs):
         """Validate job data."""
         salary_min = attrs.get('salary_min')
         salary_max = attrs.get('salary_max')
         
-        if salary_min and salary_max and salary_min > salary_max:
-            raise serializers.ValidationError({
-                'salary_max': 'Maximum salary must be greater than minimum salary.'
-            })
+        # Validate salary range
+        if salary_min is not None and salary_max is not None:
+            if salary_min > salary_max:
+                raise serializers.ValidationError({
+                    'salary_max': 'Maximum salary must be greater than or equal to minimum salary.'
+                })
+        
+        # Validate required fields for creation
+        if not self.instance:  # Creating new job
+            required_fields = ['title', 'description', 'requirements', 'category', 'location']
+            for field in required_fields:
+                if field not in attrs:
+                    raise serializers.ValidationError({
+                        field: f'{field.replace("_", " ").title()} is required.'
+                    })
         
         return attrs
     
     def create(self, validated_data):
-        """Create a new job."""
+        """Create a new job with current user as employer."""
         validated_data['employer'] = self.context['request'].user
         return super().create(validated_data)
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
-    """Serializer for Application model."""
+    """
+    Serializer for Application model.
+    
+    Security: Validates duplicate applications, job status, and file uploads.
+    Automatically sets applicant to current user and status to pending.
+    """
     job = JobListSerializer(read_only=True)
     job_id = serializers.PrimaryKeyRelatedField(
         queryset=Job.objects.filter(status='active'),
         source='job',
-        write_only=True
+        write_only=True,
+        help_text='ID of the job to apply for'
     )
     applicant = serializers.SerializerMethodField()
     
@@ -168,6 +205,10 @@ class ApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = (
             'id', 'applicant', 'applied_at', 'reviewed_at', 'status'
         )
+        extra_kwargs = {
+            'cover_letter': {'required': True},
+            'resume': {'required': True},
+        }
     
     def get_applicant(self, obj):
         """Get applicant information."""
@@ -206,8 +247,14 @@ class ApplicationSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        """Create a new application."""
+        """
+        Create a new application.
+        
+        Security: Automatically sets applicant to current user and status to pending.
+        Prevents users from creating applications for other users.
+        """
         validated_data['applicant'] = self.context['request'].user
+        validated_data['status'] = 'pending'  # Always start as pending
         return super().create(validated_data)
 
 
