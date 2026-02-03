@@ -212,15 +212,45 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
 
 class ApplicationUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating application status (employer/admin only)."""
+    """
+    Serializer for updating application status (employer/admin only).
+    
+    Security: Only allows updating status and notes.
+    Automatically sets reviewed_at when status changes.
+    """
     class Meta:
         model = Application
         fields = ('status', 'notes', 'reviewed_at')
+        read_only_fields = ('reviewed_at',)
+    
+    def validate_status(self, value):
+        """Validate status transition."""
+        if self.instance:
+            current_status = self.instance.status
+            # Define valid status transitions
+            valid_transitions = {
+                'pending': ['reviewed', 'accepted', 'rejected'],
+                'reviewed': ['accepted', 'rejected'],
+                'accepted': [],  # Final state
+                'rejected': [],  # Final state
+            }
+            
+            # Check if transition is valid
+            if value != current_status:
+                if value not in valid_transitions.get(current_status, []):
+                    raise serializers.ValidationError(
+                        f'Cannot transition from {current_status} to {value}. '
+                        f'Valid transitions: {", ".join(valid_transitions.get(current_status, []))}'
+                    )
+        
+        return value
     
     def update(self, instance, validated_data):
         """Update application and set reviewed_at if status changes."""
+        # Update reviewed_at when status changes from pending
         if 'status' in validated_data and instance.status != validated_data['status']:
-            from django.utils import timezone
-            validated_data['reviewed_at'] = timezone.now()
+            if instance.status == 'pending' and not instance.reviewed_at:
+                validated_data['reviewed_at'] = timezone.now()
+        
         return super().update(instance, validated_data)
 

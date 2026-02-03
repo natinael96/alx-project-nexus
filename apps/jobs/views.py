@@ -351,6 +351,16 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Application model.
     Users can create applications, employers can view/manage applications for their jobs.
+    
+    Security Features:
+    - Role-based access control (Admin/Employer/User)
+    - User role required for creating applications
+    - Job owner/Admin only for status updates
+    - Automatic applicant assignment
+    - File validation (size and extension)
+    - Duplicate application prevention
+    - Job status validation (active jobs only)
+    - Status transition validation
     """
     queryset = Application.objects.select_related('job', 'applicant', 'job__employer')
     permission_classes = [IsAuthenticated, CanApplyForJob]
@@ -388,22 +398,71 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='List applications',
-        operation_description='Get a list of applications (filtered by user role)'
+        operation_description='Get a paginated list of applications. Results are filtered by user role: Admin sees all, Employer sees applications for their jobs, User sees only their own applications.',
+        manual_parameters=[
+            openapi.Parameter(
+                'status',
+                openapi.IN_QUERY,
+                description='Filter by application status',
+                type=openapi.TYPE_STRING,
+                enum=['pending', 'reviewed', 'accepted', 'rejected']
+            ),
+            openapi.Parameter(
+                'job',
+                openapi.IN_QUERY,
+                description='Filter by job ID',
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description='Order results by field (applied_at, status). Prefix with - for descending.',
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description='Page number for pagination',
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'page_size',
+                openapi.IN_QUERY,
+                description='Number of items per page (max 100)',
+                type=openapi.TYPE_INTEGER
+            ),
+        ],
+        responses={
+            200: ApplicationSerializer(many=True),
+            401: 'Unauthorized',
+        }
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Get application details',
-        operation_description='Get detailed information about a specific application'
+        operation_description='Get detailed information about a specific application. Access is role-based: Users see their own, Employers see applications for their jobs, Admins see all.',
+        responses={
+            200: ApplicationSerializer,
+            401: 'Unauthorized',
+            403: 'Forbidden - Access denied',
+            404: 'Application not found',
+        }
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
     
     @swagger_auto_schema(
         operation_summary='Submit job application',
-        operation_description='Submit a new job application (User only)',
-        request_body=ApplicationSerializer
+        operation_description='Submit a new job application. User role only. Validates: job exists and is active, user hasn\'t already applied, resume file size (max 5MB) and extension (PDF, DOC, DOCX). Automatically sets applicant to current user and status to pending.',
+        request_body=ApplicationSerializer,
+        responses={
+            201: ApplicationSerializer,
+            400: 'Bad Request - Validation errors (duplicate application, invalid job, file validation)',
+            401: 'Unauthorized',
+            403: 'Forbidden - User role required (not employer/admin)',
+        }
     )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -418,9 +477,21 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='Update application status',
-        operation_description='Update application status (Job Owner/Admin only)',
-        request_body=ApplicationUpdateSerializer
+        operation_description='Update application status and notes. Job owner/Admin only. Supports partial updates (PATCH). Automatically sets reviewed_at timestamp when status changes from pending. Validates status transitions.',
+        request_body=ApplicationUpdateSerializer,
+        responses={
+            200: ApplicationUpdateSerializer,
+            400: 'Bad Request - Validation errors (invalid status transition)',
+            401: 'Unauthorized',
+            403: 'Forbidden - Job owner/Admin access required',
+            404: 'Application not found',
+        }
     )
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
