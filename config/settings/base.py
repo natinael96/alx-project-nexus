@@ -262,3 +262,7 @@ LOGGING = {
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
+# Email Configuration (Base settings - override in environment-specific files)
+SITE_NAME = config('SITE_NAME', default='Job Board Platform')
+SITE_URL = config('SITE_URL', default='http://localhost:8000')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.com')

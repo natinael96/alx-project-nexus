@@ -1,0 +1,48 @@
+{% extends "emails/base.html" %}
+
+{% block header %}Application Status Update{% endblock %}
+
+{% block content %}
+<h2>Hello {{ applicant.first_name }}!</h2>
+
+<p>Your application status has been updated for the following position:</p>
+
+<div class="info-box">
+    <h3>{{ job.title }}</h3>
+    <p><strong>Company:</strong> {{ job.employer.get_full_name|default:job.employer.username }}</p>
+    <p><strong>Location:</strong> {{ job.location }}</p>
+</div>
+
+<p><strong>Status Update:</strong></p>
+{% if old_status %}
+<p>Previous Status: <strong>{{ old_status|title }}</strong></p>
+{% endif %}
+<p>Current Status: <strong>{{ application.get_status_display }}</strong></p>
+
+{% if application.status == 'accepted' %}
+<div class="info-box" style="border-left-color: #28a745;">
+    <h3>🎉 Congratulations!</h3>
+    <p>Your application has been accepted! The employer will contact you with next steps.</p>
+</div>
+{% elif application.status == 'rejected' %}
+<div class="info-box" style="border-left-color: #dc3545;">
+    <p>We're sorry to inform you that your application was not selected for this position.</p>
+    <p>Don't be discouraged - keep applying to other opportunities that match your skills!</p>
+</div>
+{% elif application.status == 'reviewed' %}
+<div class="info-box" style="border-left-color: #17a2b8;">
+    <p>Your application is currently under review. The employer is evaluating your qualifications.</p>
+</div>
+{% endif %}
+
+{% if application.notes %}
+<p><strong>Notes from Employer:</strong></p>
+<p>{{ application.notes }}</p>
+{% endif %}
+
+<p>
+    <a href="{{ site_url }}/api/applications/{{ application.id }}/" class="button">View Application</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

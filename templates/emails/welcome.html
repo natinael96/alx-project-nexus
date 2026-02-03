@@ -1,0 +1,43 @@
+{% extends "emails/base.html" %}
+
+{% block header %}Welcome to {{ site_name }}!{% endblock %}
+
+{% block content %}
+<h2>Hello {{ user.first_name }}!</h2>
+
+<p>Welcome to {{ site_name }}! We're excited to have you join our platform.</p>
+
+<p>Your account has been successfully created with the following details:</p>
+
+<div class="info-box">
+    <p><strong>Username:</strong> {{ user.username }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Role:</strong> {{ user.get_role_display }}</p>
+</div>
+
+{% if user.is_regular_user %}
+<p>As a job seeker, you can now:</p>
+<ul>
+    <li>Browse and search for job opportunities</li>
+    <li>Apply for jobs that match your skills</li>
+    <li>Track your application status</li>
+    <li>Manage your profile and resume</li>
+</ul>
+{% elif user.is_employer %}
+<p>As an employer, you can now:</p>
+<ul>
+    <li>Post job listings</li>
+    <li>Manage your job postings</li>
+    <li>Review and manage applications</li>
+    <li>Connect with talented candidates</li>
+</ul>
+{% endif %}
+
+<p>
+    <a href="{{ site_url }}/login" class="button">Get Started</a>
+</p>
+
+<p>If you have any questions, feel free to contact our support team.</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

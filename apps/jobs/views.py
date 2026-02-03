@@ -21,6 +21,7 @@ from .serializers import (
 from .filters import JobFilter, ApplicationFilter
 from .permissions import IsJobOwnerOrAdmin, CanApplyForJob, CanManageCategory
 from apps.accounts.permissions import IsEmployerOrAdmin, IsAdminUser
+from apps.core.email_service import EmailService
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -288,6 +289,15 @@ class JobViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        
+        # Send job posted confirmation email
+        try:
+            EmailService.send_job_posted_confirmation(serializer.instance)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send job posted email: {str(e)}")
+        
         headers = self.get_success_headers(serializer.data)
         return Response(
             JobDetailSerializer(serializer.instance).data,
@@ -310,9 +320,23 @@ class JobViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        old_status = instance.status  # Store old status for email
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        
+        # Send status change notification if status changed
+        if 'status' in request.data and old_status != serializer.instance.status:
+            try:
+                EmailService.send_job_status_change_notification(
+                    serializer.instance,
+                    old_status
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send job status change email: {str(e)}")
+        
         return Response(JobDetailSerializer(serializer.instance).data)
     
     @swagger_auto_schema(
@@ -468,6 +492,23 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        
+        # Send application confirmation email to applicant
+        try:
+            EmailService.send_application_confirmation(serializer.instance)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send application confirmation email: {str(e)}")
+        
+        # Send new application notification to employer
+        try:
+            EmailService.send_new_application_notification(serializer.instance)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send new application notification: {str(e)}")
+        
         headers = self.get_success_headers(serializer.data)
         return Response(
             serializer.data,
@@ -490,8 +531,22 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        old_status = instance.status  # Store old status for email
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        
+        # Send status update email if status changed
+        if 'status' in request.data and old_status != serializer.instance.status:
+            try:
+                EmailService.send_application_status_update(
+                    serializer.instance,
+                    old_status
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send application status update email: {str(e)}")
+        
         return Response(serializer.data)
 

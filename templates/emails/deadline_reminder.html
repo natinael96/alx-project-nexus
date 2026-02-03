@@ -1,0 +1,28 @@
+{% extends "emails/base.html" %}
+
+{% block header %}Application Deadline Reminder{% endblock %}
+
+{% block content %}
+<h2>Hello {{ employer.first_name }}!</h2>
+
+<p>This is a reminder that your job posting's application deadline is approaching:</p>
+
+<div class="info-box">
+    <h3>{{ job.title }}</h3>
+    <p><strong>Application Deadline:</strong> {{ job.application_deadline|date:"F d, Y" }}</p>
+    <p><strong>Days Remaining:</strong> {{ days_remaining }} day{{ days_remaining|pluralize }}</p>
+    <p><strong>Current Applications:</strong> {{ job.applications.count }}</p>
+</div>
+
+{% if days_remaining <= 3 %}
+<p style="color: #dc3545; font-weight: bold;">⚠️ The deadline is approaching soon! Consider extending it if you need more time to review applications.</p>
+{% endif %}
+
+<p>You can extend the deadline or close the job posting at any time.</p>
+
+<p>
+    <a href="{{ site_url }}/api/jobs/{{ job.id }}/" class="button">Manage Job Posting</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

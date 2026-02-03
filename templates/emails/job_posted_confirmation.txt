@@ -1,0 +1,30 @@
+Job Posted Successfully
+
+Hello {{ employer.first_name }}!
+
+Your job posting has been successfully created and is now live on {{ site_name }}!
+
+Job Title: {{ job.title }}
+Category: {{ job.category.name }}
+Location: {{ job.location }}
+Job Type: {{ job.get_job_type_display }}
+Status: {{ job.get_status_display }}
+{% if job.application_deadline %}
+Application Deadline: {{ job.application_deadline|date:"F d, Y" }}
+{% endif %}
+
+{% if job.status == 'active' %}
+Your job is now visible to job seekers and they can start applying immediately.
+{% elif job.status == 'draft' %}
+Your job is saved as a draft. You can publish it when you're ready.
+{% endif %}
+
+View job posting: {{ site_url }}/api/jobs/{{ job.id }}/
+
+You'll receive email notifications when candidates apply for this position.
+
+Best regards,
+The {{ site_name }} Team
+
+---
+This is an automated email from {{ site_name }}. Please do not reply to this email.

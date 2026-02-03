@@ -1,0 +1,30 @@
+Application Submitted
+
+Hello {{ applicant.first_name }}!
+
+Thank you for applying! We've received your application for the following position:
+
+Job Title: {{ job.title }}
+Company: {{ job.employer.get_full_name|default:job.employer.username }}
+Location: {{ job.location }}
+Job Type: {{ job.get_job_type_display }}
+{% if job.salary_min and job.salary_max %}
+Salary Range: ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+{% endif %}
+
+Application Details:
+- Applied: {{ application.applied_at|date:"F d, Y" }}
+- Status: {{ application.get_status_display }}
+
+Your application is now under review. The employer will review your application and get back to you soon.
+
+You can track your application status by logging into your account:
+{{ site_url }}/api/applications/{{ application.id }}/
+
+Best of luck with your application!
+
+Best regards,
+The {{ site_name }} Team
+
+---
+This is an automated email from {{ site_name }}. Please do not reply to this email.

@@ -1,0 +1,24 @@
+New Application Received
+
+Hello {{ employer.first_name }}!
+
+You have received a new application for your job posting:
+
+Job Title: {{ job.title }}
+Location: {{ job.location }}
+Total Applications: {{ job.applications.count }}
+
+Applicant Details:
+- Name: {{ applicant.get_full_name|default:applicant.username }}
+- Email: {{ applicant.email }}
+- Applied: {{ application.applied_at|date:"F d, Y" }}
+
+Please review the application and update its status when you make a decision.
+
+Review application: {{ site_url }}/api/applications/{{ application.id }}/
+
+Best regards,
+The {{ site_name }} Team
+
+---
+This is an automated email from {{ site_name }}. Please do not reply to this email.

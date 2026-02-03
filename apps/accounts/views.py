@@ -8,6 +8,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.db import models as db_models
+from apps.core.email_service import EmailService
 from .models import User
 from .serializers import (
     UserRegistrationSerializer,
@@ -44,6 +46,15 @@ def register_user(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        # Send welcome email
+        try:
+            EmailService.send_welcome_email(user)
+        except Exception as e:
+            # Log error but don't fail registration
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send welcome email: {str(e)}")
+        
         return Response({
             'user': UserSerializer(user).data,
             'message': 'User registered successfully'

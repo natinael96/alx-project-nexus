@@ -1,0 +1,24 @@
+Application Deadline Reminder
+
+Hello {{ employer.first_name }}!
+
+This is a reminder that your job posting's application deadline is approaching:
+
+Job Title: {{ job.title }}
+Application Deadline: {{ job.application_deadline|date:"F d, Y" }}
+Days Remaining: {{ days_remaining }} day{{ days_remaining|pluralize }}
+Current Applications: {{ job.applications.count }}
+
+{% if days_remaining <= 3 %}
+⚠️ The deadline is approaching soon! Consider extending it if you need more time to review applications.
+{% endif %}
+
+You can extend the deadline or close the job posting at any time.
+
+Manage job posting: {{ site_url }}/api/jobs/{{ job.id }}/
+
+Best regards,
+The {{ site_name }} Team
+
+---
+This is an automated email from {{ site_name }}. Please do not reply to this email.

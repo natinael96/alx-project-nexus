@@ -1,0 +1,29 @@
+{% extends "emails/base.html" %}
+
+{% block header %}Job Status Updated{% endblock %}
+
+{% block content %}
+<h2>Hello {{ employer.first_name }}!</h2>
+
+<p>The status of your job posting has been updated:</p>
+
+<div class="info-box">
+    <h3>{{ job.title }}</h3>
+    <p><strong>Previous Status:</strong> {{ old_status|title }}</p>
+    <p><strong>Current Status:</strong> {{ job.get_status_display }}</p>
+</div>
+
+{% if job.status == 'active' %}
+<p>Your job posting is now active and visible to job seekers.</p>
+{% elif job.status == 'closed' %}
+<p>Your job posting has been closed. No new applications will be accepted.</p>
+{% elif job.status == 'draft' %}
+<p>Your job posting has been saved as a draft and is not visible to job seekers.</p>
+{% endif %}
+
+<p>
+    <a href="{{ site_url }}/api/jobs/{{ job.id }}/" class="button">View Job Posting</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

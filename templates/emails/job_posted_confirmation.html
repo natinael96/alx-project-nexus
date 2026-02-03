@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+
+{% block header %}Job Posted Successfully{% endblock %}
+
+{% block content %}
+<h2>Hello {{ employer.first_name }}!</h2>
+
+<p>Your job posting has been successfully created and is now live on {{ site_name }}!</p>
+
+<div class="info-box">
+    <h3>{{ job.title }}</h3>
+    <p><strong>Category:</strong> {{ job.category.name }}</p>
+    <p><strong>Location:</strong> {{ job.location }}</p>
+    <p><strong>Job Type:</strong> {{ job.get_job_type_display }}</p>
+    <p><strong>Status:</strong> {{ job.get_status_display }}</p>
+    {% if job.application_deadline %}
+    <p><strong>Application Deadline:</strong> {{ job.application_deadline|date:"F d, Y" }}</p>
+    {% endif %}
+</div>
+
+{% if job.status == 'active' %}
+<p>Your job is now visible to job seekers and they can start applying immediately.</p>
+{% elif job.status == 'draft' %}
+<p>Your job is saved as a draft. You can publish it when you're ready.</p>
+{% endif %}
+
+<p>
+    <a href="{{ site_url }}/api/jobs/{{ job.id }}/" class="button">View Job Posting</a>
+</p>
+
+<p>You'll receive email notifications when candidates apply for this position.</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

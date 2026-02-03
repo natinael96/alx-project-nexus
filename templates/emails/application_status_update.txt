@@ -1,0 +1,40 @@
+Application Status Update
+
+Hello {{ applicant.first_name }}!
+
+Your application status has been updated for the following position:
+
+Job Title: {{ job.title }}
+Company: {{ job.employer.get_full_name|default:job.employer.username }}
+Location: {{ job.location }}
+
+Status Update:
+{% if old_status %}
+Previous Status: {{ old_status|title }}
+{% endif %}
+Current Status: {{ application.get_status_display }}
+
+{% if application.status == 'accepted' %}
+🎉 Congratulations!
+
+Your application has been accepted! The employer will contact you with next steps.
+{% elif application.status == 'rejected' %}
+We're sorry to inform you that your application was not selected for this position.
+
+Don't be discouraged - keep applying to other opportunities that match your skills!
+{% elif application.status == 'reviewed' %}
+Your application is currently under review. The employer is evaluating your qualifications.
+{% endif %}
+
+{% if application.notes %}
+Notes from Employer:
+{{ application.notes }}
+{% endif %}
+
+View application: {{ site_url }}/api/applications/{{ application.id }}/
+
+Best regards,
+The {{ site_name }} Team
+
+---
+This is an automated email from {{ site_name }}. Please do not reply to this email.

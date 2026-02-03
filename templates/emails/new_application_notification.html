@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+
+{% block header %}New Application Received{% endblock %}
+
+{% block content %}
+<h2>Hello {{ employer.first_name }}!</h2>
+
+<p>You have received a new application for your job posting:</p>
+
+<div class="info-box">
+    <h3>{{ job.title }}</h3>
+    <p><strong>Location:</strong> {{ job.location }}</p>
+    <p><strong>Total Applications:</strong> {{ job.applications.count }}</p>
+</div>
+
+<p><strong>Applicant Details:</strong></p>
+<ul>
+    <li><strong>Name:</strong> {{ applicant.get_full_name|default:applicant.username }}</li>
+    <li><strong>Email:</strong> {{ applicant.email }}</li>
+    <li><strong>Applied:</strong> {{ application.applied_at|date:"F d, Y" }}</li>
+</ul>
+
+<p>Please review the application and update its status when you make a decision.</p>
+
+<p>
+    <a href="{{ site_url }}/api/applications/{{ application.id }}/" class="button">Review Application</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

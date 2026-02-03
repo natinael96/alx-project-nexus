@@ -1,0 +1,37 @@
+{% extends "emails/base.html" %}
+
+{% block header %}Application Submitted{% endblock %}
+
+{% block content %}
+<h2>Hello {{ applicant.first_name }}!</h2>
+
+<p>Thank you for applying! We've received your application for the following position:</p>
+
+<div class="info-box">
+    <h3>{{ job.title }}</h3>
+    <p><strong>Company:</strong> {{ job.employer.get_full_name|default:job.employer.username }}</p>
+    <p><strong>Location:</strong> {{ job.location }}</p>
+    <p><strong>Job Type:</strong> {{ job.get_job_type_display }}</p>
+    {% if job.salary_min and job.salary_max %}
+    <p><strong>Salary Range:</strong> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}</p>
+    {% endif %}
+</div>
+
+<p><strong>Application Details:</strong></p>
+<ul>
+    <li><strong>Applied:</strong> {{ application.applied_at|date:"F d, Y" }}</li>
+    <li><strong>Status:</strong> {{ application.get_status_display }}</li>
+</li>
+
+<p>Your application is now under review. The employer will review your application and get back to you soon.</p>
+
+<p>You can track your application status by logging into your account.</p>
+
+<p>
+    <a href="{{ site_url }}/api/applications/{{ application.id }}/" class="button">View Application</a>
+</p>
+
+<p>Best of luck with your application!</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

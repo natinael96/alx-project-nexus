@@ -1,0 +1,25 @@
+Job Status Updated
+
+Hello {{ employer.first_name }}!
+
+The status of your job posting has been updated:
+
+Job Title: {{ job.title }}
+Previous Status: {{ old_status|title }}
+Current Status: {{ job.get_status_display }}
+
+{% if job.status == 'active' %}
+Your job posting is now active and visible to job seekers.
+{% elif job.status == 'closed' %}
+Your job posting has been closed. No new applications will be accepted.
+{% elif job.status == 'draft' %}
+Your job posting has been saved as a draft and is not visible to job seekers.
+{% endif %}
+
+View job posting: {{ site_url }}/api/jobs/{{ job.id }}/
+
+Best regards,
+The {{ site_name }} Team
+
+---
+This is an automated email from {{ site_name }}. Please do not reply to this email.
