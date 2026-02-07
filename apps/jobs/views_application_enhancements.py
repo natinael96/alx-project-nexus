@@ -153,14 +153,16 @@ class ScreeningQuestionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return screening questions for jobs the user can access."""
-        job_id = self.request.query_params.get('job_id')
         # Handle schema generation (swagger/redoc)
         if getattr(self, 'swagger_fake_view', False):
             return ScreeningQuestion.objects.none()
+        if not self.request or not self.request.user.is_authenticated:
+            return ScreeningQuestion.objects.none()
         
+        job_id = self.request.query_params.get('job_id')
         queryset = ScreeningQuestion.objects.all()
         
-        if self.request.user.is_authenticated and not self.request.user.is_admin:
+        if not self.request.user.is_admin:
             queryset = queryset.filter(job__employer=self.request.user)
         
         if job_id:

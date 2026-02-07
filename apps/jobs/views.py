@@ -167,10 +167,14 @@ class JobViewSet(viewsets.ModelViewSet):
         - Regular users see only active jobs
         - Employers/admins can see all jobs (filtered by status if requested)
         """
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Job.objects.none()
+        
         queryset = super().get_queryset()
         
         # By default, show only active jobs to non-authenticated users
-        if not self.request.user.is_authenticated:
+        if not self.request or not self.request.user.is_authenticated:
             queryset = queryset.filter(status='active')
         # Employers and admins can see all their jobs
         elif not (self.request.user.is_employer or self.request.user.is_admin):

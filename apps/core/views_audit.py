@@ -25,6 +25,12 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         """Return audit logs with optional filtering."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return AuditLog.objects.none()
+        if not self.request or not self.request.user.is_authenticated:
+            return AuditLog.objects.none()
+        
         queryset = AuditLog.objects.select_related('user', 'content_type')
         
         # Filter by user
@@ -33,9 +39,9 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(user_id=user_id)
         
         # Filter by action
-        action = self.request.query_params.get('action')
-        if action:
-            queryset = queryset.filter(action=action)
+        action_param = self.request.query_params.get('action')
+        if action_param:
+            queryset = queryset.filter(action=action_param)
         
         # Filter by content type
         content_type = self.request.query_params.get('content_type')
@@ -62,6 +68,12 @@ class ChangeHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         """Return change history with optional filtering."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ChangeHistory.objects.none()
+        if not self.request or not self.request.user.is_authenticated:
+            return ChangeHistory.objects.none()
+        
         queryset = ChangeHistory.objects.select_related('changed_by', 'content_type')
         
         # Filter by content type and object ID

@@ -273,34 +273,13 @@ def change_password(request):
 
 
 @swagger_auto_schema(
-    manual_parameters=[
-        openapi.Parameter(
-            'role',
-            openapi.IN_QUERY,
-            description='Filter users by role (admin, employer, user)',
-            type=openapi.TYPE_STRING,
-            enum=['admin', 'employer', 'user']
-        ),
-        openapi.Parameter(
-            'search',
-            openapi.IN_QUERY,
-            description='Search users by username, email, or full name',
-            type=openapi.TYPE_STRING
-        ),
-        openapi.Parameter(
-            'is_active',
-            openapi.IN_QUERY,
-            description='Filter by active status (true/false)',
-            type=openapi.TYPE_BOOLEAN
-        ),
-    ],
     responses={
         200: UserSerializer(many=True),
         401: 'Unauthorized',
         403: 'Forbidden - Admin access required'
     },
     operation_summary='List all users',
-    operation_description='Get a paginated list of all users. Admin only. Supports filtering by role, search, and active status.'
+    operation_description='Get a paginated list of all users. Admin only. Supports filtering by role (admin, employer, user), search (username, email, name), and is_active (true/false).'
 )
 class UserListAPIView(generics.ListAPIView):
     """
@@ -318,6 +297,12 @@ class UserListAPIView(generics.ListAPIView):
     
     def get_queryset(self):
         """Filter queryset based on query parameters."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return User.objects.none()
+        if not self.request or not self.request.user.is_authenticated:
+            return User.objects.none()
+        
         queryset = super().get_queryset()
         
         # Filter by role
