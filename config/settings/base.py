@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'apps.core.middleware.APILoggingMiddleware',
     'apps.core.middleware.PerformanceMonitoringMiddleware',
     'apps.core.middleware.DatabaseQueryLoggingMiddleware',
+    'apps.core.middleware_audit.AuditLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
