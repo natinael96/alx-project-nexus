@@ -377,7 +377,11 @@ Authorization: Bearer <access_token>
 
 #### List Applications
 
-**Endpoint:** `GET /api/v1/jobs/applications/`
+**Endpoint:** `GET /api/v1/jobs/applications/` or `GET /api/v1/applications/`
+
+**Note:** Applications can be accessed at either endpoint:
+- `/api/v1/jobs/applications/` (nested under jobs - recommended)
+- `/api/v1/applications/` (standalone)
 
 **Headers:**
 ```
