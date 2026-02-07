@@ -1,25 +1,26 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:14-alpine
-    container_name: jobboard_db
-    environment:
-      POSTGRES_DB: ${DB_NAME:-jobboard_db}
-      POSTGRES_USER: ${DB_USER:-jobboard_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-jobboard_password}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-jobboard_user}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - jobboard_network
+  # Local PostgreSQL database (comment out if using external/cloud database like Neon)
+  # db:
+  #   image: postgres:14-alpine
+  #   container_name: jobboard_db
+  #   environment:
+  #     POSTGRES_DB: ${DB_NAME:-jobboard_db}
+  #     POSTGRES_USER: ${DB_USER:-jobboard_user}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-jobboard_password}
+  #     PGDATA: /var/lib/postgresql/data/pgdata
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "${DB_PORT:-5432}:5432"
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-jobboard_user}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - jobboard_network
 
   redis:
     image: redis:7-alpine
@@ -49,8 +50,8 @@ services:
     env_file:
       - .env
     depends_on:
-      db:
-        condition: service_healthy
+      # db:  # Comment out if using external database
+      #   condition: service_healthy
       redis:
         condition: service_healthy
     networks:

@@ -75,13 +75,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
+# Support for Neon PostgreSQL (cloud) or local PostgreSQL
+# Neon requires SSL, so we check if SSL is required via DB_SSL_REQUIRE or if host contains 'neon'
+DB_SSL_REQUIRE = config('DB_SSL_REQUIRE', default=False, cast=bool)
+DB_HOST = config('DB_HOST', default='localhost')
+
+# Auto-detect Neon database (if host contains 'neon', enable SSL)
+if 'neon' in DB_HOST.lower() or DB_SSL_REQUIRE:
+    DB_SSL_REQUIRE = True
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='jobboard_db'),
         'USER': config('DB_USER', default='jobboard_user'),
         'PASSWORD': config('DB_PASSWORD', default='jobboard_password'),
-        'HOST': config('DB_HOST', default='localhost'),
+        'HOST': DB_HOST,
         'PORT': config('DB_PORT', default='5432'),
         # Connection pooling
         'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # 10 minutes
@@ -93,6 +102,12 @@ DATABASES = {
         'ATOMIC_REQUESTS': False,  # Set per-view transaction handling
     }
 }
+
+# Add SSL options if required (for Neon or cloud databases)
+if DB_SSL_REQUIRE:
+    DATABASES['default']['OPTIONS'].update({
+        'sslmode': 'require',
+    })
 
 # Read replica configuration (for scaling)
 USE_READ_REPLICA = config('USE_READ_REPLICA', default=False, cast=bool)

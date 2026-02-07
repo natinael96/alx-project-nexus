@@ -1,37 +1,28 @@
 #!/bin/bash
-
 set -e
 
-echo "Waiting for PostgreSQL to be ready..."
+# Only wait for local PostgreSQL if DB_HOST is 'db' (Docker service)
+if [ "${DB_HOST:-db}" = "db" ]; then
+    echo "Waiting for PostgreSQL to be ready..."
+    while ! nc -z db 5432; do
+      sleep 0.1
+    done
+    echo "PostgreSQL is ready!"
+else
+    echo "Using external database: ${DB_HOST}"
+fi
 
-# Wait for PostgreSQL to be ready
-until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; do
-  >&2 echo "PostgreSQL is unavailable - sleeping"
-  sleep 1
+echo "Waiting for Redis to be ready..."
+while ! nc -z redis 6379; do
+  sleep 0.1
 done
+echo "Redis is ready!"
 
->&2 echo "PostgreSQL is up - executing commands"
-
-# Run migrations
 echo "Running migrations..."
-python manage.py makemigrations --noinput || true
 python manage.py migrate --noinput
 
-# Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput || true
 
-# Create superuser if it doesn't exist (optional)
-# Uncomment and modify if you want to auto-create superuser
-# python manage.py shell << EOF
-# from django.contrib.auth import get_user_model
-# User = get_user_model()
-# if not User.objects.filter(username='admin').exists():
-#     User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-# EOF
-
-echo "Starting server..."
-
-# Execute the command passed to the container
+echo "Starting application..."
 exec "$@"
-
