@@ -50,7 +50,7 @@ urlpatterns = [
     # Health checks and monitoring
     path('health/', include('apps.core.urls')),
     
-    # File downloads (secure)
+    # File downloads (secure) - using different namespace to avoid conflict
     path('api/files/', include('apps.core.urls')),
 ]
 

@@ -31,16 +31,19 @@ SECURE_REFERRER_POLICY = config('SECURE_REFERRER_POLICY', default='strict-origin
 # Uncomment and configure if using a reverse proxy
 # SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Email configuration
+# Email configuration (Production - use real SMTP service)
+# For production, configure with real SMTP (Gmail, SendGrid, Mailgun, AWS SES, etc.)
+# Or use Mailtrap for testing/staging environments
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
     default='django.core.mail.backends.smtp.EmailBackend'
 )
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST = config('EMAIL_HOST', default='')  # Required - no default for production
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)  # Default to standard SMTP port
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')  # Required - no default
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')  # Required - no default
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.com')
 
 # CORS settings for production
@@ -52,7 +55,7 @@ CORS_ALLOWED_ORIGINS = config(
 
 # Database connection pooling for production
 DATABASES['default'].update({
-    'CONN_MAX_AGE': 600,  # 10 minutes connection pooling
+    'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # 10 minutes connection pooling
     'ATOMIC_REQUESTS': False,  # Set to True if you want each view to be wrapped in a transaction
     'OPTIONS': {
         'connect_timeout': 10,
@@ -61,9 +64,13 @@ DATABASES['default'].update({
 })
 
 # Cache configuration for production (Redis)
+# Uses CACHE_BACKEND and CACHE_LOCATION from .env
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
+        'BACKEND': config(
+            'CACHE_BACKEND',
+            default='django_redis.cache.RedisCache'
+        ),
         'LOCATION': config(
             'CACHE_LOCATION',
             default='redis://127.0.0.1:6379/1'

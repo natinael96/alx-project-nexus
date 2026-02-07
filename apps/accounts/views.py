@@ -271,7 +271,6 @@ def change_password(request):
 
 
 @swagger_auto_schema(
-    method='get',
     manual_parameters=[
         openapi.Parameter(
             'role',
@@ -335,51 +334,15 @@ class UserListAPIView(generics.ListAPIView):
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
-                models.Q(username__icontains=search) |
-                models.Q(email__icontains=search) |
-                models.Q(first_name__icontains=search) |
-                models.Q(last_name__icontains=search)
+                db_models.Q(username__icontains=search) |
+                db_models.Q(email__icontains=search) |
+                db_models.Q(first_name__icontains=search) |
+                db_models.Q(last_name__icontains=search)
             )
         
         return queryset.select_related().order_by('-date_joined')
 
 
-@swagger_auto_schema(
-    method='get',
-    responses={
-        200: UserSerializer,
-        401: 'Unauthorized',
-        403: 'Forbidden - Admin access required',
-        404: 'User not found'
-    },
-    operation_summary='Get user details',
-    operation_description='Retrieve detailed information about a specific user. Admin only.'
-)
-@swagger_auto_schema(
-    method='put',
-    request_body=UserSerializer,
-    responses={
-        200: UserSerializer,
-        400: 'Bad Request',
-        401: 'Unauthorized',
-        403: 'Forbidden - Admin access required',
-        404: 'User not found'
-    },
-    operation_summary='Update user',
-    operation_description='Update user information. Admin only. Can change roles, activate/deactivate users.'
-)
-@swagger_auto_schema(
-    method='delete',
-    responses={
-        204: 'User deleted successfully',
-        401: 'Unauthorized',
-        403: 'Forbidden - Admin access required',
-        404: 'User not found',
-        400: 'Cannot delete user (e.g., last admin or self-deletion)'
-    },
-    operation_summary='Delete user',
-    operation_description='Delete a user account. Admin only. Prevents deletion of last admin and self-deletion.'
-)
 class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update, or delete a user (Admin only).
@@ -398,6 +361,32 @@ class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         """Optimize queryset with select_related."""
         return super().get_queryset().select_related()
     
+    @swagger_auto_schema(
+        responses={
+            200: UserSerializer,
+            401: 'Unauthorized',
+            403: 'Forbidden - Admin access required',
+            404: 'User not found'
+        },
+        operation_summary='Get user details',
+        operation_description='Retrieve detailed information about a specific user. Admin only.'
+    )
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve user details."""
+        return super().retrieve(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        request_body=UserSerializer,
+        responses={
+            200: UserSerializer,
+            400: 'Bad Request',
+            401: 'Unauthorized',
+            403: 'Forbidden - Admin access required',
+            404: 'User not found'
+        },
+        operation_summary='Update user',
+        operation_description='Update user information. Admin only. Can change roles, activate/deactivate users.'
+    )
     def update(self, request, *args, **kwargs):
         """Update user with additional security checks."""
         partial = kwargs.pop('partial', False)
@@ -427,6 +416,17 @@ class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         self.perform_update(serializer)
         return Response(serializer.data)
     
+    @swagger_auto_schema(
+        responses={
+            204: 'User deleted successfully',
+            401: 'Unauthorized',
+            403: 'Forbidden - Admin access required',
+            404: 'User not found',
+            400: 'Cannot delete user (e.g., last admin or self-deletion)'
+        },
+        operation_summary='Delete user',
+        operation_description='Delete a user account. Admin only. Prevents deletion of last admin and self-deletion.'
+    )
     def destroy(self, request, *args, **kwargs):
         """Delete user with security checks."""
         instance = self.get_object()

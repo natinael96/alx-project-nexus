@@ -36,8 +36,6 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
         fields = (
             'in_app_job_applications', 'in_app_application_updates',
             'in_app_new_jobs', 'in_app_messages', 'in_app_system',
-            'push_enabled', 'push_job_applications', 'push_application_updates',
-            'push_new_jobs', 'push_messages',
             'notification_frequency', 'notification_frequency_display',
             'created_at', 'updated_at'
         )

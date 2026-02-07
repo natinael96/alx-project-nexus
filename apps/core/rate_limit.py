@@ -2,6 +2,7 @@
 Rate limiting utilities and decorators.
 """
 from functools import wraps
+from typing import Optional, Callable
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils import timezone

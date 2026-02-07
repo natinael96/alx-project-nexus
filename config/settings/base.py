@@ -187,19 +187,12 @@ MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # File Storage Configuration
-FILE_STORAGE_BACKEND = config('FILE_STORAGE_BACKEND', default='local')  # local, supabase, s3
+FILE_STORAGE_BACKEND = config('FILE_STORAGE_BACKEND', default='supabase')  # local, supabase
 
 # Supabase Storage Configuration
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_KEY = config('SUPABASE_KEY', default='')
 SUPABASE_STORAGE_BUCKET = config('SUPABASE_STORAGE_BUCKET', default='files')
-
-# AWS S3 Configuration (alternative to Supabase)
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='')
-AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
-AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default='')  # For CDN
 
 # File Processing Configuration
 ENABLE_VIRUS_SCANNING = config('ENABLE_VIRUS_SCANNING', default=False, cast=bool)

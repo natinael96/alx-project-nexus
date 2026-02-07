@@ -1,6 +1,6 @@
 """
 File storage abstraction layer with support for multiple backends.
-Supports Supabase Storage, AWS S3, and local filesystem.
+Supports Supabase Storage and local filesystem.
 """
 import os
 import logging
@@ -186,108 +186,6 @@ class SupabaseStorageBackend(StorageBackend):
         return content_types.get(ext, 'application/octet-stream')
 
 
-class S3StorageBackend(StorageBackend):
-    """
-    AWS S3 storage backend.
-    """
-    
-    def __init__(self, bucket_name: str = None):
-        try:
-            import boto3
-            from botocore.exceptions import ClientError
-            
-            self.bucket_name = bucket_name or getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
-            if not self.bucket_name:
-                raise ValueError("AWS_STORAGE_BUCKET_NAME must be set")
-            
-            self.s3_client = boto3.client(
-                's3',
-                aws_access_key_id=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
-                aws_secret_access_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
-                region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
-            )
-        except ImportError:
-            logger.error("boto3 package not installed. Install with: pip install boto3")
-            raise
-        except Exception as e:
-            logger.error(f"Failed to initialize S3 client: {e}")
-            raise
-    
-    def save(self, name: str, content: BinaryIO, max_length: Optional[int] = None) -> str:
-        """Save file to S3."""
-        try:
-            if hasattr(content, 'read'):
-                file_content = content.read()
-            else:
-                file_content = content
-            
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=name,
-                Body=file_content,
-                ContentType=self._get_content_type(name)
-            )
-            return name
-        except Exception as e:
-            logger.error(f"Error saving file to S3: {e}")
-            raise
-    
-    def delete(self, name: str) -> None:
-        """Delete file from S3."""
-        try:
-            self.s3_client.delete_object(Bucket=self.bucket_name, Key=name)
-        except Exception as e:
-            logger.error(f"Error deleting file from S3: {e}")
-            raise
-    
-    def exists(self, name: str) -> bool:
-        """Check if file exists in S3."""
-        try:
-            self.s3_client.head_object(Bucket=self.bucket_name, Key=name)
-            return True
-        except ClientError:
-            return False
-    
-    def url(self, name: str) -> str:
-        """Get public URL for file."""
-        return f"https://{self.bucket_name}.s3.amazonaws.com/{name}"
-    
-    def size(self, name: str) -> int:
-        """Get file size from S3."""
-        try:
-            response = self.s3_client.head_object(Bucket=self.bucket_name, Key=name)
-            return response.get('ContentLength', 0)
-        except Exception:
-            return 0
-    
-    def generate_signed_url(self, name: str, expiration: int = 3600) -> str:
-        """Generate signed URL for secure file access."""
-        try:
-            url = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': name},
-                ExpiresIn=expiration
-            )
-            return url
-        except Exception as e:
-            logger.error(f"Error generating signed URL from S3: {e}")
-            return ""
-    
-    def _get_content_type(self, filename: str) -> str:
-        """Get content type from filename."""
-        ext = os.path.splitext(filename)[1].lower()
-        content_types = {
-            '.pdf': 'application/pdf',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-        }
-        return content_types.get(ext, 'application/octet-stream')
-
-
 class StorageManager:
     """
     Storage manager that provides a unified interface for multiple storage backends.
@@ -316,15 +214,6 @@ class StorageManager:
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize Supabase storage, falling back to local: {e}")
-                return LocalStorageBackend()
-        
-        elif storage_type == 's3':
-            try:
-                return S3StorageBackend(
-                    bucket_name=getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize S3 storage, falling back to local: {e}")
                 return LocalStorageBackend()
         
         else:

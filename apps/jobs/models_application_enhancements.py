@@ -14,7 +14,7 @@ class ApplicationNote(models.Model):
     application = models.ForeignKey(
         Application,
         on_delete=models.CASCADE,
-        related_name='notes',
+        related_name='application_notes',
         help_text='Application this note belongs to'
     )
     author = models.ForeignKey(

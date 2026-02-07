@@ -5,7 +5,8 @@ from django.urls import path
 from . import views
 from . import views_file_download
 
-app_name = 'core'
+# Note: app_name removed to allow multiple includes with different namespaces
+# If needed, use explicit namespace in include() calls
 
 urlpatterns = [
     # Health checks

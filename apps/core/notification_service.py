@@ -69,10 +69,6 @@ class NotificationService:
                 metadata=metadata or {}
             )
             
-            # Send push notification if enabled
-            if NotificationService._should_send_push(prefs, notification_type):
-                NotificationService._send_push_notification(notification)
-            
             return notification
         except Exception as e:
             logger.error(f"Error creating notification: {e}")
@@ -90,28 +86,6 @@ class NotificationService:
             'system': prefs.in_app_system,
         }
         return type_mapping.get(notification_type, True)
-    
-    @staticmethod
-    def _should_send_push(prefs: Optional[NotificationPreference], notification_type: str) -> bool:
-        """Check if push notification should be sent."""
-        if not prefs or not prefs.push_enabled:
-            return False
-        
-        type_mapping = {
-            'job_application': prefs.push_job_applications,
-            'application_status': prefs.push_application_updates,
-            'job_posted': prefs.push_new_jobs,
-            'new_job_match': prefs.push_new_jobs,
-            'message': prefs.push_messages,
-        }
-        return type_mapping.get(notification_type, False)
-    
-    @staticmethod
-    def _send_push_notification(notification: Notification):
-        """Send push notification (placeholder for push service integration)."""
-        # TODO: Integrate with push notification service (FCM, OneSignal, etc.)
-        logger.info(f"Would send push notification: {notification.title}")
-        pass
     
     @staticmethod
     def mark_as_read(notification_id: int, user: User) -> bool:

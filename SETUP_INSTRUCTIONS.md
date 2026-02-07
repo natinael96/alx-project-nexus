@@ -84,13 +84,20 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_LIFETIME=60  # minutes
 JWT_REFRESH_TOKEN_LIFETIME=1440  # minutes
 
-# Email Configuration (for development)
-EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
+# Email Configuration (Mailtrap for development/testing)
+# How to get Mailtrap credentials:
+# 1. Go to https://mailtrap.io and sign up/login
+# 2. Create a new inbox or select existing inbox
+# 3. Go to SMTP Settings tab
+# 4. Select "Integrations" → "Django"
+# 5. Copy the credentials shown
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.mailtrap.io
+EMAIL_PORT=2525
 EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
+EMAIL_USE_SSL=False
+EMAIL_HOST_USER=your-mailtrap-username
+EMAIL_HOST_PASSWORD=your-mailtrap-password
 DEFAULT_FROM_EMAIL=noreply@jobboard.local
 FRONTEND_URL=http://localhost:3000
 
@@ -102,9 +109,17 @@ STATIC_ROOT=/app/staticfiles
 STATIC_URL=/static/
 
 # Optional: Supabase Storage (if using cloud storage)
-SUPABASE_URL=
-SUPABASE_KEY=
-SUPABASE_STORAGE_BUCKET=
+# How to get these values:
+# 1. Go to https://supabase.com and sign in/create account
+# 2. Create a new project or select existing project
+# 3. Go to Project Settings (gear icon) > API
+# 4. Copy "Project URL" → SUPABASE_URL
+# 5. Copy "anon public" key (or "service_role" key for admin access) → SUPABASE_KEY
+# 6. Go to Storage section in Supabase dashboard
+# 7. Create a bucket (or use existing) → SUPABASE_STORAGE_BUCKET
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-anon-or-service-role-key-here
+SUPABASE_STORAGE_BUCKET=your-bucket-name
 
 # Optional: AWS S3 (if using S3)
 AWS_ACCESS_KEY_ID=
@@ -121,8 +136,35 @@ ADMIN_IP_WHITELIST=
 CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/0
 
+# Cache Configuration
+CACHE_BACKEND=django.core.cache.backends.redis.RedisCache
+CACHE_LOCATION=redis://redis:6379/1
+CACHE_KEY_PREFIX=jobboard
+CACHE_TIMEOUT=300
+
 # Application Settings
 PORT=8000
+SITE_NAME=Job Board Platform
+SITE_URL=http://localhost:8000
+
+# CORS Settings
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+
+# Logging
+LOG_LEVEL=INFO
+DB_LOG_LEVEL=WARNING
+
+# File Processing Settings
+ENABLE_VIRUS_SCANNING=False
+ENABLE_RESUME_PARSING=True
+ENABLE_IMAGE_OPTIMIZATION=True
+IMAGE_QUALITY=85
+MAX_IMAGE_WIDTH=1920
+MAX_IMAGE_HEIGHT=1080
+PDF_THUMBNAIL_SIZE=200,200
+
+# Database Connection Pooling
+DB_CONN_MAX_AGE=600
 ```
 
 ### Step 3: Build and Start Services

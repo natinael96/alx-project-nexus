@@ -148,28 +148,6 @@ class NotificationPreference(models.Model):
         help_text='Receive in-app system notifications'
     )
     
-    # Push notification preferences
-    push_enabled = models.BooleanField(
-        default=False,
-        help_text='Enable push notifications'
-    )
-    push_job_applications = models.BooleanField(
-        default=False,
-        help_text='Receive push notifications for job applications'
-    )
-    push_application_updates = models.BooleanField(
-        default=False,
-        help_text='Receive push notifications for application status updates'
-    )
-    push_new_jobs = models.BooleanField(
-        default=False,
-        help_text='Receive push notifications for new matching jobs'
-    )
-    push_messages = models.BooleanField(
-        default=False,
-        help_text='Receive push notifications for messages'
-    )
-    
     # Notification frequency
     notification_frequency = models.CharField(
         max_length=20,

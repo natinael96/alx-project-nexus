@@ -26,8 +26,8 @@ class NotificationPreferenceAdmin(admin.ModelAdmin):
     """
     Admin interface for NotificationPreference model.
     """
-    list_display = ('user', 'push_enabled', 'notification_frequency', 'updated_at')
-    list_filter = ('push_enabled', 'notification_frequency', 'created_at')
+    list_display = ('user', 'notification_frequency', 'updated_at')
+    list_filter = ('notification_frequency', 'created_at')
     search_fields = ('user__username', 'user__email')
     readonly_fields = ('created_at', 'updated_at')
     
@@ -36,12 +36,6 @@ class NotificationPreferenceAdmin(admin.ModelAdmin):
             'fields': (
                 'in_app_job_applications', 'in_app_application_updates',
                 'in_app_new_jobs', 'in_app_messages', 'in_app_system'
-            )
-        }),
-        ('Push Notifications', {
-            'fields': (
-                'push_enabled', 'push_job_applications', 'push_application_updates',
-                'push_new_jobs', 'push_messages'
             )
         }),
         ('Settings', {

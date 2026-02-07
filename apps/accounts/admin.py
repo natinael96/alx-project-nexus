@@ -33,10 +33,6 @@ class UserAdmin(BaseUserAdmin):
         ('Additional Information', {
             'fields': ('role', 'phone_number', 'profile_picture', 'bio')
         }),
-        ('Timestamps', {
-            'fields': ('date_joined', 'last_login'),
-            'classes': ('collapse',)
-        }),
     )
     
     add_fieldsets = BaseUserAdmin.add_fieldsets + (

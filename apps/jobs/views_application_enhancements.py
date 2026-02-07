@@ -20,7 +20,8 @@ from .serializers_application_enhancements import (
     ApplicationStageSerializer, InterviewSerializer,
     ApplicationScoreSerializer, ApplicationTemplateSerializer
 )
-from apps.accounts.permissions import IsEmployerOrAdmin, IsJobOwnerOrAdmin
+from apps.accounts.permissions import IsEmployerOrAdmin
+from .permissions import IsJobOwnerOrAdmin
 import logging
 
 logger = logging.getLogger(__name__)

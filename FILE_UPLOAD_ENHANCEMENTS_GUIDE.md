@@ -16,7 +16,7 @@ A comprehensive file upload enhancement system has been implemented for the Job 
 
 **Features:**
 - **Unified Interface**: Single API for multiple storage backends
-- **Multiple Backends**: Support for Local, Supabase, and AWS S3
+- **Multiple Backends**: Support for Local and Supabase Storage
 - **Automatic Fallback**: Falls back to local storage if cloud storage fails
 - **Signed URLs**: Secure, time-limited file access
 
@@ -31,12 +31,6 @@ A comprehensive file upload enhancement system has been implemented for the Job 
    - Cloud storage via Supabase Storage
    - Automatic bucket management
    - Public and signed URL support
-   - Configuration via environment variables
-
-3. **S3StorageBackend**
-   - AWS S3 cloud storage
-   - CDN integration support
-   - Signed URL generation
    - Configuration via environment variables
 
 ### ✅ Storage Manager
@@ -243,20 +237,13 @@ python manage.py cleanup_old_files --applications --days 30
 Add to `.env` file:
 
 ```env
-# File Storage Backend (local, supabase, s3)
+# File Storage Backend (local, supabase)
 FILE_STORAGE_BACKEND=supabase
 
 # Supabase Configuration
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-supabase-key
 SUPABASE_STORAGE_BUCKET=files
-
-# AWS S3 Configuration (alternative)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_STORAGE_BUCKET_NAME=your-bucket-name
-AWS_S3_REGION_NAME=us-east-1
-AWS_S3_CUSTOM_DOMAIN=cdn.example.com  # For CDN
 
 # File Processing
 ENABLE_VIRUS_SCANNING=false
@@ -391,7 +378,6 @@ if storage_manager.exists(file_path):
 
 **Required Packages:**
 - `storages` - Django storage backends
-- `boto3` - AWS S3 support
 - `supabase` - Supabase Storage support
 - `Pillow` - Image processing
 - `pdf2image` - PDF thumbnail generation
@@ -413,7 +399,6 @@ pip install -r requirements.txt
 
 - ✅ Storage abstraction layer
 - ✅ Supabase Storage integration
-- ✅ AWS S3 Storage integration
 - ✅ Local storage fallback
 - ✅ Resume parsing (PDF, DOCX)
 - ✅ Image optimization
@@ -424,7 +409,7 @@ pip install -r requirements.txt
 - ✅ File access control
 - ✅ Automatic file cleanup
 - ✅ Management command for old file purging
-- ✅ CDN support (via S3 custom domain)
+- ✅ CDN support (via Supabase CDN)
 
 ### Ready for Production ✅
 

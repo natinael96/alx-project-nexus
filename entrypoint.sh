@@ -1,22 +1,29 @@
 #!/bin/bash
 set -e
 
-# Only wait for local PostgreSQL if DB_HOST is 'db' (Docker service)
-if [ "${DB_HOST:-db}" = "db" ]; then
-    echo "Waiting for PostgreSQL to be ready..."
-    while ! nc -z db 5432; do
-      sleep 0.1
-    done
-    echo "PostgreSQL is ready!"
+# Using cloud PostgreSQL (Neon) - no need to wait for local database
+echo "Using cloud database: ${DB_HOST}"
+
+# Wait for Redis to be ready
+echo "Waiting for Redis to be ready..."
+max_attempts=30
+attempt=0
+while ! nc -z redis 6379; do
+  attempt=$((attempt + 1))
+  if [ $attempt -ge $max_attempts ]; then
+    echo "Redis is not available after $max_attempts attempts. Continuing anyway..."
+    break
+  fi
+  sleep 1
+done
+if nc -z redis 6379; then
+  echo "Redis is ready!"
 else
-    echo "Using external database: ${DB_HOST}"
+  echo "Warning: Redis connection check failed, but continuing..."
 fi
 
-echo "Waiting for Redis to be ready..."
-while ! nc -z redis 6379; do
-  sleep 0.1
-done
-echo "Redis is ready!"
+echo "Creating migrations..."
+python manage.py makemigrations || echo "No new migrations to create"
 
 echo "Running migrations..."
 python manage.py migrate --noinput
