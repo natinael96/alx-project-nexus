@@ -8,3 +8,6 @@ from . import admin_notifications  # noqa
 
 # Import audit admin
 from . import admin_audit  # noqa
+
+# Import security admin
+from . import admin_security  # noqa

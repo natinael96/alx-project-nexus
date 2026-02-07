@@ -16,6 +16,10 @@ python-decouple==3.8
 
 # CORS
 django-cors-headers==4.3.1
+django-allauth==0.57.0
+social-auth-app-django==5.4.0
+django-compressor==4.4
+Pillow==10.2.0
 
 # Image Processing
 Pillow==10.1.0

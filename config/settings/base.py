@@ -49,6 +49,9 @@ MIDDLEWARE = [
     'apps.core.middleware.PerformanceMonitoringMiddleware',
     'apps.core.middleware.DatabaseQueryLoggingMiddleware',
     'apps.core.middleware_audit.AuditLoggingMiddleware',
+    # Security middleware
+    'apps.core.middleware_security.APIKeyAuthenticationMiddleware',
+    'apps.core.middleware_security.IPWhitelistMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -80,15 +83,32 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default='jobboard_password'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
-        # Connection settings
-        'CONN_MAX_AGE': 0,  # Override in production for connection pooling
+        # Connection pooling
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # 10 minutes
         'OPTIONS': {
             'connect_timeout': 10,
+            'options': '-c statement_timeout=30000',  # 30 seconds
         },
         # Transaction settings
         'ATOMIC_REQUESTS': False,  # Set per-view transaction handling
     }
 }
+
+# Read replica configuration (for scaling)
+USE_READ_REPLICA = config('USE_READ_REPLICA', default=False, cast=bool)
+if USE_READ_REPLICA:
+    DATABASES['read_replica'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_REPLICA_NAME', default='jobboard_db_replica'),
+        'USER': config('DB_REPLICA_USER', default='postgres'),
+        'PASSWORD': config('DB_REPLICA_PASSWORD', default='postgres'),
+        'HOST': config('DB_REPLICA_HOST', default='localhost'),
+        'PORT': config('DB_REPLICA_PORT', default='5432'),
+        'CONN_MAX_AGE': config('DB_REPLICA_CONN_MAX_AGE', default=600, cast=int),
+    }
+    
+    # Database router for read replicas
+    DATABASE_ROUTERS = ['apps.core.db_router.ReadReplicaRouter']
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
