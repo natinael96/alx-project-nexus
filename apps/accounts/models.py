@@ -1,12 +1,23 @@
 """
 User models for the Job Board Platform.
 """
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import RegexValidator
 
 
 class User(AbstractUser):
+    """
+    Custom User model extending Django's AbstractUser with UUID primary key.
+    Supports role-based access control (admin, employer, user).
+    """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text='Unique identifier for this user'
+    )
     """
     Custom User model extending Django's AbstractUser.
     Supports role-based access control (admin, employer, user).

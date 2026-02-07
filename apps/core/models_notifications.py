@@ -4,9 +4,10 @@ Notification models for in-app notifications.
 from django.db import models
 from django.utils import timezone
 from apps.accounts.models import User
+from apps.core.models_base import UUIDModel
 
 
-class Notification(models.Model):
+class Notification(UUIDModel):
     """
     Model for in-app notifications.
     """
@@ -74,7 +75,8 @@ class Notification(models.Model):
         blank=True,
         help_text='Type of related object (e.g., job, application)'
     )
-    related_object_id = models.IntegerField(
+    related_object_id = models.CharField(
+        max_length=36,
         null=True,
         blank=True,
         help_text='ID of related object'
@@ -115,7 +117,7 @@ class Notification(models.Model):
             self.save(update_fields=['is_read', 'read_at'])
 
 
-class NotificationPreference(models.Model):
+class NotificationPreference(UUIDModel):
     """
     Model for user notification preferences (extends UserPreferences).
     """

@@ -6,9 +6,10 @@ from django.utils import timezone
 from django.core.validators import URLValidator
 from .models import Job
 from apps.accounts.models import User
+from apps.core.models_base import UUIDModel
 
 
-class JobView(models.Model):
+class JobView(UUIDModel):
     """
     Model to track job views for analytics.
     """
@@ -58,7 +59,7 @@ class JobView(models.Model):
         return f"{self.job.title} viewed by {user_str}"
 
 
-class JobShare(models.Model):
+class JobShare(UUIDModel):
     """
     Model to track job shares.
     """
@@ -108,7 +109,7 @@ class JobShare(models.Model):
         return f"{self.job.title} shared via {self.get_method_display()}"
 
 
-class JobRecommendation(models.Model):
+class JobRecommendation(UUIDModel):
     """
     Model for job recommendations to users.
     """
@@ -158,7 +159,7 @@ class JobRecommendation(models.Model):
         return f"{self.user.username}: {self.job.title} (score: {self.score})"
 
 
-class JobAnalytics(models.Model):
+class JobAnalytics(UUIDModel):
     """
     Model for job performance analytics.
     """
@@ -208,7 +209,7 @@ class JobAnalytics(models.Model):
         self.save()
 
 
-class ApplicationSource(models.Model):
+class ApplicationSource(UUIDModel):  
     """
     Model to track where applications come from.
     """

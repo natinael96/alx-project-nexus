@@ -47,7 +47,11 @@ class ApplicationStatusHistorySerializer(serializers.ModelSerializer):
             'new_status', 'new_status_display', 'changed_by', 'changed_by_name',
             'reason', 'changed_at'
         )
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'application', 'old_status', 'old_status_display',
+            'new_status', 'new_status_display', 'changed_by', 'changed_by_name',
+            'reason', 'changed_at'
+        )
 
 
 class ScreeningQuestionSerializer(serializers.ModelSerializer):

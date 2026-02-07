@@ -84,6 +84,18 @@ DB_HOST = config('DB_HOST', default='localhost')
 if 'neon' in DB_HOST.lower() or DB_SSL_REQUIRE:
     DB_SSL_REQUIRE = True
 
+# Determine if using cloud database (Neon, Supabase, etc.)
+IS_CLOUD_DB = 'neon' in DB_HOST.lower() or 'supabase' in DB_HOST.lower() or 'azure' in DB_HOST.lower() or DB_SSL_REQUIRE
+
+# Connection max age: shorter for cloud databases to avoid connection issues
+if IS_CLOUD_DB:
+    # Cloud databases (Neon, etc.) benefit from shorter connection times
+    # to avoid "connection closed" errors
+    CONN_MAX_AGE = config('DB_CONN_MAX_AGE', default=60, cast=int)  # 1 minute for cloud
+else:
+    # Local databases can keep connections longer
+    CONN_MAX_AGE = config('DB_CONN_MAX_AGE', default=600, cast=int)  # 10 minutes for local
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -92,8 +104,8 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default='jobboard_password'),
         'HOST': DB_HOST,
         'PORT': config('DB_PORT', default='5432'),
-        # Connection pooling
-        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # 10 minutes
+        # Connection pooling - shorter for cloud databases
+        'CONN_MAX_AGE': CONN_MAX_AGE,
         'OPTIONS': {
             'connect_timeout': 10,
             'options': '-c statement_timeout=30000',  # 30 seconds
@@ -107,7 +119,15 @@ DATABASES = {
 if DB_SSL_REQUIRE:
     DATABASES['default']['OPTIONS'].update({
         'sslmode': 'require',
+        # Additional SSL options for better compatibility
+        'sslcert': config('DB_SSL_CERT', default=None),
+        'sslkey': config('DB_SSL_KEY', default=None),
+        'sslrootcert': config('DB_SSL_ROOT_CERT', default=None),
     })
+    # Remove None values from OPTIONS
+    DATABASES['default']['OPTIONS'] = {
+        k: v for k, v in DATABASES['default']['OPTIONS'].items() if v is not None
+    }
 
 # Read replica configuration (for scaling)
 USE_READ_REPLICA = config('USE_READ_REPLICA', default=False, cast=bool)

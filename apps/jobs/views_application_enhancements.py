@@ -142,9 +142,13 @@ class ScreeningQuestionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return screening questions for jobs the user can access."""
         job_id = self.request.query_params.get('job_id')
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ScreeningQuestion.objects.none()
+        
         queryset = ScreeningQuestion.objects.all()
         
-        if not self.request.user.is_admin:
+        if self.request.user.is_authenticated and not self.request.user.is_admin:
             queryset = queryset.filter(job__employer=self.request.user)
         
         if job_id:
@@ -193,10 +197,14 @@ class ApplicationStageViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return stages for applications the user can access."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ApplicationStage.objects.none()
+        
         application_id = self.request.query_params.get('application_id')
         queryset = ApplicationStage.objects.all()
         
-        if not self.request.user.is_admin:
+        if self.request.user.is_authenticated and not self.request.user.is_admin:
             queryset = queryset.filter(application__job__employer=self.request.user)
         
         if application_id:
@@ -260,8 +268,16 @@ class ApplicationTemplateViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return templates for the current user."""
-        if self.request.user.is_admin:
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ApplicationTemplate.objects.none()
+        
+        if self.request.user.is_authenticated and self.request.user.is_admin:
             return ApplicationTemplate.objects.all()
+        
+        if not self.request.user.is_authenticated:
+            return ApplicationTemplate.objects.none()
+        
         return ApplicationTemplate.objects.filter(employer=self.request.user)
     
     def perform_create(self, serializer):

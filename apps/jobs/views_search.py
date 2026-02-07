@@ -217,6 +217,13 @@ class SavedSearchViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's saved searches."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return SavedSearch.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return SavedSearch.objects.none()
+        
         return SavedSearch.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
@@ -277,6 +284,13 @@ class SearchAlertViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's search alerts."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return SearchAlert.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return SearchAlert.objects.none()
+        
         return SearchAlert.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):

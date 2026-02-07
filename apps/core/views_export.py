@@ -65,7 +65,7 @@ def export_jobs(request):
     queryset = Job.objects.select_related('category', 'employer')
     
     # Filter by employer if not admin
-    if not request.user.is_admin:
+    if request.user.is_authenticated and not request.user.is_admin:
         queryset = queryset.filter(employer=request.user)
     elif request.query_params.get('employer'):
         queryset = queryset.filter(employer_id=request.query_params.get('employer'))
@@ -127,7 +127,7 @@ def export_applications(request):
     queryset = Application.objects.select_related('job', 'applicant', 'job__employer')
     
     # Filter by employer if not admin
-    if not (request.user.is_authenticated and request.user.is_admin):
+    if request.user.is_authenticated and not request.user.is_admin:
         queryset = queryset.filter(job__employer=request.user)
     
     # Filter by status

@@ -65,7 +65,10 @@ class JobAnalyticsSerializer(serializers.ModelSerializer):
             'id', 'job', 'job_title', 'total_views', 'unique_views',
             'total_applications', 'shares_count', 'saved_count', 'last_updated'
         )
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'job', 'job_title', 'total_views', 'unique_views',
+            'total_applications', 'shares_count', 'saved_count', 'last_updated'
+        )
 
 
 class ApplicationSourceSerializer(serializers.ModelSerializer):

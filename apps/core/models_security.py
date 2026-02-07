@@ -5,10 +5,11 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import RegexValidator
 from apps.accounts.models import User
+from apps.core.models_base import UUIDModel
 import secrets
 
 
-class APIKey(models.Model):
+class APIKey(UUIDModel):
     """
     Model for managing API keys for programmatic access.
     """
@@ -98,7 +99,7 @@ class APIKey(models.Model):
         return ip_address in allowed_ips
 
 
-class IPWhitelist(models.Model):
+class IPWhitelist(UUIDModel):
     """
     Model for IP whitelisting (e.g., for admin access).
     """
@@ -137,7 +138,7 @@ class IPWhitelist(models.Model):
         return f"{self.ip_address} - {self.description or 'No description'}"
 
 
-class SecurityEvent(models.Model):
+class SecurityEvent(UUIDModel):
     """
     Model for tracking security events (failed logins, suspicious activity, etc.).
     """

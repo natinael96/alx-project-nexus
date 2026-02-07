@@ -318,8 +318,16 @@ class JobShareViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return shares for the current user or all shares if admin."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return JobShare.objects.none()
+        
         if self.request.user.is_authenticated and self.request.user.is_admin:
             return JobShare.objects.all()
+        
+        if not self.request.user.is_authenticated:
+            return JobShare.objects.none()
+        
         return JobShare.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):

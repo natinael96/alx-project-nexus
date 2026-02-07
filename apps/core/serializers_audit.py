@@ -31,7 +31,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'object_repr', 'changes', 'ip_address', 'user_agent',
             'request_path', 'request_method', 'metadata', 'created_at'
         )
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'user', 'user_name', 'action', 'action_display',
+            'content_type', 'content_type_name', 'object_id',
+            'object_repr', 'changes', 'ip_address', 'user_agent',
+            'request_path', 'request_method', 'metadata', 'created_at'
+        )
 
 
 class ChangeHistorySerializer(serializers.ModelSerializer):
@@ -54,4 +59,8 @@ class ChangeHistorySerializer(serializers.ModelSerializer):
             'changed_by', 'changed_by_name', 'field_name',
             'old_value', 'new_value', 'change_reason', 'created_at'
         )
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'content_type', 'content_type_name', 'object_id',
+            'changed_by', 'changed_by_name', 'field_name',
+            'old_value', 'new_value', 'change_reason', 'created_at'
+        )

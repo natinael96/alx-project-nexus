@@ -5,9 +5,10 @@ from django.db import models
 from django.utils import timezone
 from .models import Application, Job
 from apps.accounts.models import User
+from apps.core.models_base import UUIDModel
 
 
-class ApplicationNote(models.Model):
+class ApplicationNote(UUIDModel):
     """
     Model for employer notes and ratings on applications.
     """
@@ -53,7 +54,7 @@ class ApplicationNote(models.Model):
         return f"Note on {self.application.job.title} by {self.author.username}"
 
 
-class ApplicationStatusHistory(models.Model):
+class ApplicationStatusHistory(UUIDModel):
     """
     Model to track application status changes over time.
     """
@@ -103,7 +104,7 @@ class ApplicationStatusHistory(models.Model):
         return f"{self.application.job.title}: {self.old_status} → {self.new_status}"
 
 
-class ScreeningQuestion(models.Model):
+class ScreeningQuestion(UUIDModel):
     """
     Model for job screening questions.
     """
@@ -158,7 +159,7 @@ class ScreeningQuestion(models.Model):
         return f"{self.job.title}: {self.question[:50]}"
 
 
-class ScreeningAnswer(models.Model):
+class ScreeningAnswer(UUIDModel):
     """
     Model for answers to screening questions.
     """
@@ -192,7 +193,7 @@ class ScreeningAnswer(models.Model):
         return f"Answer to {self.question.question[:50]}"
 
 
-class ApplicationStage(models.Model):
+class ApplicationStage(UUIDModel):
     """
     Model for multi-stage application process.
     """
@@ -255,7 +256,7 @@ class ApplicationStage(models.Model):
         return f"{self.application.job.title}: {self.stage_name}"
 
 
-class Interview(models.Model):
+class Interview(UUIDModel):
     """
     Model for interview scheduling.
     """
@@ -326,7 +327,7 @@ class Interview(models.Model):
         return f"Interview for {self.application.job.title} on {self.scheduled_at}"
 
 
-class ApplicationScore(models.Model):
+class ApplicationScore(UUIDModel):
     """
     Model for application scoring/ranking.
     """
@@ -385,7 +386,7 @@ class ApplicationScore(models.Model):
         return f"Score {self.overall_score} for {self.application.job.title}"
 
 
-class ApplicationTemplate(models.Model):
+class ApplicationTemplate(UUIDModel):
     """
     Model for application templates.
     """

@@ -37,6 +37,13 @@ class SkillViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's skills."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Skill.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return Skill.objects.none()
+        
         return Skill.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
@@ -53,6 +60,13 @@ class EducationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's education."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Education.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return Education.objects.none()
+        
         return Education.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
@@ -69,6 +83,13 @@ class WorkHistoryViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's work history."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return WorkHistory.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return WorkHistory.objects.none()
+        
         return WorkHistory.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
@@ -85,6 +106,13 @@ class PortfolioViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's portfolio."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Portfolio.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return Portfolio.objects.none()
+        
         return Portfolio.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
@@ -101,6 +129,13 @@ class SocialLinkViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's social links."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return SocialLink.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return SocialLink.objects.none()
+        
         return SocialLink.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
@@ -117,6 +152,13 @@ class UserPreferencesViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's preferences."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return UserPreferences.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return UserPreferences.objects.none()
+        
         return UserPreferences.objects.filter(user=self.request.user)
     
     def get_object(self):
@@ -140,6 +182,13 @@ class SavedJobViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's saved jobs."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return SavedJob.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return SavedJob.objects.none()
+        
         return SavedJob.objects.filter(user=self.request.user).select_related('job')
     
     def perform_create(self, serializer):

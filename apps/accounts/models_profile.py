@@ -4,9 +4,10 @@ User profile enhancement models.
 from django.db import models
 from django.core.validators import URLValidator
 from .models import User
+from apps.core.models_base import UUIDModel
 
 
-class Skill(models.Model):
+class Skill(UUIDModel):
     """
     Model for user skills.
     """
@@ -54,7 +55,7 @@ class Skill(models.Model):
         return f"{self.user.username}: {self.name} ({self.level})"
 
 
-class Education(models.Model):
+class Education(UUIDModel):
     """
     Model for user education history.
     """
@@ -116,7 +117,7 @@ class Education(models.Model):
             raise ValidationError('Current education cannot have an end date.')
 
 
-class WorkHistory(models.Model):
+class WorkHistory(UUIDModel):
     """
     Model for user work experience history.
     """
@@ -179,7 +180,7 @@ class WorkHistory(models.Model):
             raise ValidationError('Current job cannot have an end date.')
 
 
-class Portfolio(models.Model):
+class Portfolio(UUIDModel):
     """
     Model for user portfolio/projects.
     """
@@ -235,7 +236,7 @@ class Portfolio(models.Model):
         return f"{self.user.username}: {self.title}"
 
 
-class SocialLink(models.Model):
+class SocialLink(UUIDModel):
     """
     Model for user social media links.
     """
@@ -284,7 +285,7 @@ class SocialLink(models.Model):
         return f"{self.user.username}: {self.get_platform_display()}"
 
 
-class UserPreferences(models.Model):
+class UserPreferences(UUIDModel):
     """
     Model for user preferences and settings.
     """
@@ -373,7 +374,7 @@ class UserPreferences(models.Model):
         return f"Preferences for {self.user.username}"
 
 
-class SavedJob(models.Model):
+class SavedJob(UUIDModel):
     """
     Model for saved jobs/bookmarks.
     """

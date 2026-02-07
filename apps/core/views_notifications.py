@@ -25,6 +25,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's notifications."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Notification.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return Notification.objects.none()
+        
         queryset = Notification.objects.filter(user=self.request.user)
         
         # Filter by read status
@@ -119,6 +126,13 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return only the current user's preferences."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return NotificationPreference.objects.none()
+        
+        if not self.request.user.is_authenticated:
+            return NotificationPreference.objects.none()
+        
         return NotificationPreference.objects.filter(user=self.request.user)
     
     def get_object(self):

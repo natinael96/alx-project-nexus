@@ -171,19 +171,49 @@ def send_email_async(self, email_type, **kwargs):
     """
     try:
         if email_type == 'application_confirmation':
-            EmailService.send_application_confirmation(kwargs['application'])
+            # Handle both application object and application_id for backward compatibility
+            if 'application_id' in kwargs:
+                from apps.jobs.models import Application
+                application = Application.objects.get(id=kwargs['application_id'])
+            else:
+                application = kwargs['application']
+            EmailService.send_application_confirmation(application)
         elif email_type == 'new_application_notification':
-            EmailService.send_new_application_notification(kwargs['application'])
+            # Handle both application object and application_id for backward compatibility
+            if 'application_id' in kwargs:
+                from apps.jobs.models import Application
+                application = Application.objects.get(id=kwargs['application_id'])
+            else:
+                application = kwargs['application']
+            EmailService.send_new_application_notification(application)
         elif email_type == 'application_status_update':
+            # Handle both application object and application_id for backward compatibility
+            if 'application_id' in kwargs:
+                from apps.jobs.models import Application
+                application = Application.objects.get(id=kwargs['application_id'])
+            else:
+                application = kwargs['application']
             EmailService.send_application_status_update(
-                kwargs['application'],
+                application,
                 kwargs.get('old_status')
             )
         elif email_type == 'job_posted_confirmation':
-            EmailService.send_job_posted_confirmation(kwargs['job'])
+            # Handle both job object and job_id for backward compatibility
+            if 'job_id' in kwargs:
+                from apps.jobs.models import Job
+                job = Job.objects.get(id=kwargs['job_id'])
+            else:
+                job = kwargs['job']
+            EmailService.send_job_posted_confirmation(job)
         elif email_type == 'job_status_change':
+            # Handle both job object and job_id for backward compatibility
+            if 'job_id' in kwargs:
+                from apps.jobs.models import Job
+                job = Job.objects.get(id=kwargs['job_id'])
+            else:
+                job = kwargs['job']
             EmailService.send_job_status_change_notification(
-                kwargs['job'],
+                job,
                 kwargs.get('old_status')
             )
         else:

@@ -54,13 +54,15 @@ CORS_ALLOWED_ORIGINS = config(
 ).split(',')
 
 # Database connection pooling for production
-DATABASES['default'].update({
-    'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # 10 minutes connection pooling
-    'ATOMIC_REQUESTS': False,  # Set to True if you want each view to be wrapped in a transaction
-    'OPTIONS': {
-        'connect_timeout': 10,
-        'options': '-c statement_timeout=30000'
-    }
+# Note: CONN_MAX_AGE is already set in base.py based on cloud/local detection
+# Only update if explicitly set in environment
+if config('DB_CONN_MAX_AGE', default=None, cast=int):
+    DATABASES['default']['CONN_MAX_AGE'] = config('DB_CONN_MAX_AGE', cast=int)
+
+# Update OPTIONS if needed (preserve SSL settings from base.py)
+DATABASES['default']['OPTIONS'].update({
+    'connect_timeout': 10,
+    'options': '-c statement_timeout=30000'
 })
 
 # Cache configuration for production (Redis)

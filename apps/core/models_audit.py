@@ -6,9 +6,10 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from apps.accounts.models import User
+from apps.core.models_base import UUIDModel
 
 
-class AuditLog(models.Model):
+class AuditLog(UUIDModel):
     """
     Model for audit logging - tracks all create, update, delete operations.
     """
@@ -46,10 +47,11 @@ class AuditLog(models.Model):
         blank=True,
         help_text='Type of object affected'
     )
-    object_id = models.PositiveIntegerField(
+    object_id = models.CharField(
+        max_length=36,
         null=True,
         blank=True,
-        help_text='ID of object affected'
+        help_text='ID of object affected (UUID)'
     )
     content_object = GenericForeignKey('content_type', 'object_id')
     
@@ -106,7 +108,7 @@ class AuditLog(models.Model):
         return f"{user_str}: {self.action} on {self.object_repr}"
 
 
-class ChangeHistory(models.Model):
+class ChangeHistory(UUIDModel):
     """
     Model for tracking detailed change history of specific objects.
     """
@@ -115,8 +117,9 @@ class ChangeHistory(models.Model):
         on_delete=models.CASCADE,
         help_text='Type of object'
     )
-    object_id = models.PositiveIntegerField(
-        help_text='ID of object'
+    object_id = models.CharField(
+        max_length=36,
+        help_text='ID of object (UUID)'
     )
     content_object = GenericForeignKey('content_type', 'object_id')
     

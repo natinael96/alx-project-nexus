@@ -1,6 +1,7 @@
 """
 Models for jobs app - Job, Category, and Application.
 """
+import uuid
 from django.db import models
 from django.db.models import F
 from django.core.validators import MinValueValidator
@@ -10,9 +11,10 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from apps.accounts.models import User
 from apps.core.utils import validate_file_size, validate_file_extension
+from apps.core.models_base import UUIDModel
 
 
-class Category(models.Model):
+class Category(UUIDModel):
     """
     Category model for organizing jobs by industry/type.
     Supports hierarchical categories with parent-child relationships.
@@ -173,7 +175,7 @@ class Category(models.Model):
         return ancestors
 
 
-class Job(models.Model):
+class Job(UUIDModel):
     """
     Job model representing job postings.
     Includes comprehensive job details and status management.
@@ -389,7 +391,7 @@ class Job(models.Model):
         return delta.days if delta.days >= 0 else None
 
 
-class Application(models.Model):
+class Application(UUIDModel):
     """
     Application model for job applications.
     Tracks applications submitted by users for jobs.

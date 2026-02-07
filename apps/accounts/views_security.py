@@ -168,8 +168,16 @@ class APIKeyViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return API keys for the current user."""
-        if self.request.user.is_admin:
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return APIKey.objects.none()
+        
+        if self.request.user.is_authenticated and self.request.user.is_admin:
             return APIKey.objects.select_related('user')
+        
+        if not self.request.user.is_authenticated:
+            return APIKey.objects.none()
+        
         return APIKey.objects.filter(user=self.request.user)
     
     @swagger_auto_schema(

@@ -107,7 +107,10 @@ class SearchHistorySerializer(serializers.ModelSerializer):
             'id', 'user', 'search_query', 'filters',
             'result_count', 'created_at'
         )
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'user', 'search_query', 'filters',
+            'result_count', 'created_at'
+        )
 
 
 class PopularSearchTermSerializer(serializers.ModelSerializer):
@@ -120,4 +123,7 @@ class PopularSearchTermSerializer(serializers.ModelSerializer):
             'id', 'term', 'search_count',
             'first_searched_at', 'last_searched_at'
         )
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'term', 'search_count',
+            'first_searched_at', 'last_searched_at'
+        )
