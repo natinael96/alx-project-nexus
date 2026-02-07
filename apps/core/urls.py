@@ -22,6 +22,6 @@ urlpatterns = [
     path('statistics/user-activity/', views.user_activity_view, name='user-activity'),
     
     # File downloads
-    path('files/resumes/<int:application_id>/', views_file_download.download_resume, name='download-resume'),
-    path('files/profiles/<int:user_id>/', views_file_download.download_profile_picture, name='download-profile-picture'),
+    path('files/resumes/<uuid:application_id>/', views_file_download.download_resume, name='download-resume'),
+    path('files/profiles/<uuid:user_id>/', views_file_download.download_profile_picture, name='download-profile-picture'),
 ]

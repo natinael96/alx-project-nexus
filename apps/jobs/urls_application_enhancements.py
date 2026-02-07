@@ -20,5 +20,5 @@ router.register(r'templates', views_application_enhancements.ApplicationTemplate
 
 urlpatterns = [
     # Application enhancement endpoints
-    path('<int:application_id>/withdraw/', views_application_enhancements.withdraw_application, name='withdraw-application'),
+    path('<uuid:application_id>/withdraw/', views_application_enhancements.withdraw_application, name='withdraw-application'),
 ] + router.urls

@@ -16,6 +16,6 @@ urlpatterns = [
     path('share/', views_job_enhancements.share_job, name='share-job'),
     path('similar/', views_job_enhancements.similar_jobs, name='similar-jobs'),
     path('recommendations/', views_job_enhancements.job_recommendations, name='job-recommendations'),
-    path('<int:job_id>/analytics/', views_job_enhancements.job_analytics, name='job-analytics'),
+    path('<uuid:job_id>/analytics/', views_job_enhancements.job_analytics, name='job-analytics'),
     path('employer/dashboard/', views_job_enhancements.employer_dashboard, name='employer-dashboard'),
 ] + router.urls

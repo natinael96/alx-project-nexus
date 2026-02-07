@@ -28,8 +28,9 @@ logger = logging.getLogger(__name__)
         openapi.Parameter(
             'application_id',
             openapi.IN_PATH,
-            description='Application ID',
-            type=openapi.TYPE_INTEGER,
+            description='Application ID (UUID)',
+            type=openapi.TYPE_STRING,
+            format=openapi.FORMAT_UUID,
             required=True
         ),
         openapi.Parameter(
@@ -129,8 +130,9 @@ def download_resume(request, application_id):
         openapi.Parameter(
             'user_id',
             openapi.IN_PATH,
-            description='User ID',
-            type=openapi.TYPE_INTEGER,
+            description='User ID (UUID)',
+            type=openapi.TYPE_STRING,
+            format=openapi.FORMAT_UUID,
             required=True
         ),
     ],

@@ -38,7 +38,7 @@ urlpatterns = [
     
     # User management (Admin only)
     path('users/', views.UserListAPIView.as_view(), name='user-list'),
-    path('users/<int:pk>/', views.UserDetailAPIView.as_view(), name='user-detail'),
+    path('users/<uuid:pk>/', views.UserDetailAPIView.as_view(), name='user-detail'),
     
     # Profile endpoints
     path('profile/', include('apps.accounts.urls_profile')),

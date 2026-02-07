@@ -18,10 +18,6 @@ class User(AbstractUser):
         editable=False,
         help_text='Unique identifier for this user'
     )
-    """
-    Custom User model extending Django's AbstractUser.
-    Supports role-based access control (admin, employer, user).
-    """
     ROLE_CHOICES = [
         ('admin', 'Admin'),
         ('employer', 'Employer'),
