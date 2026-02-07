@@ -32,7 +32,10 @@ urlpatterns = [
     path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('api/swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     
-    # API endpoints
+    # API endpoints (versioned)
+    path('api/v1/', include('config.urls_v1')),
+    
+    # Legacy API endpoints (redirect to v1)
     path('api/auth/', include('apps.accounts.urls')),
     path('api/jobs/', include('apps.jobs.urls')),
     path('api/jobs/', include('apps.jobs.urls_job_enhancements')),
@@ -40,15 +43,15 @@ urlpatterns = [
     path('api/applications/', include('apps.jobs.urls_application')),
     path('api/applications/', include('apps.jobs.urls_application_enhancements')),
     path('api/search/', include('apps.jobs.urls_search')),
+    path('api/notifications/', include('apps.core.urls_notifications')),
+    path('api/export/', include('apps.core.urls_export')),
+    path('api/audit/', include('apps.core.urls_audit')),
     
     # Health checks and monitoring
     path('health/', include('apps.core.urls')),
     
     # File downloads (secure)
     path('api/files/', include('apps.core.urls')),
-    
-    # Notifications
-    path('api/notifications/', include('apps.core.urls_notifications')),
 ]
 
 # Serve media files in development

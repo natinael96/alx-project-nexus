@@ -5,6 +5,9 @@ from rest_framework.throttling import UserRateThrottle, AnonRateThrottle, Scoped
 from django.core.cache import cache
 from django.conf import settings
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BurstRateThrottle(UserRateThrottle):

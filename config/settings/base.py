@@ -196,6 +196,20 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'apps.core.throttling.UserBurstRateThrottle',
+        'apps.core.throttling.AnonBurstRateThrottle',
+        'apps.core.throttling.ReadWriteThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '1000/hour',
+        'anon': '100/hour',
+        'user_burst': '50/minute',
+        'anon_burst': '20/minute',
+        'read': '1000/hour',
+        'write': '200/hour',
+        'ip_based': '100/hour',
+    },
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',

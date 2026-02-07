@@ -6,6 +6,7 @@ from django.db.models.signals import post_save, post_delete, pre_delete
 from django.dispatch import receiver
 from apps.core.email_service import EmailService
 from apps.core.cache_utils import invalidate_category_cache, invalidate_job_cache
+from apps.core.audit_service import AuditService
 
 # Import async email task (with fallback if Celery not available)
 try:
@@ -26,6 +27,30 @@ def job_post_save_handler(sender, instance, created, **kwargs):
     """
     Handles post-save events for Job model to send email notifications and invalidate cache.
     """
+    # Log audit
+    try:
+        if created:
+            AuditService.log_action(
+                action='create',
+                user=getattr(instance, '_created_by', None),
+                obj=instance
+            )
+        else:
+            # Check for status change
+            try:
+                old_instance = sender.objects.get(pk=instance.pk)
+                if old_instance.status != instance.status:
+                    AuditService.log_action(
+                        action='update',
+                        user=getattr(instance, '_changed_by', None),
+                        obj=instance,
+                        changes={'status': {'old': old_instance.status, 'new': instance.status}}
+                    )
+            except sender.DoesNotExist:
+                pass
+    except Exception as e:
+        logger.error(f"Error logging audit for job: {e}")
+    
     # Invalidate cache
     try:
         invalidate_job_cache(instance.id if not created else None)
@@ -66,6 +91,16 @@ def job_post_delete_handler(sender, instance, **kwargs):
     """
     Handle post-delete events for Job model to invalidate cache.
     """
+    # Log audit
+    try:
+        AuditService.log_action(
+            action='delete',
+            user=getattr(instance, '_deleted_by', None),
+            obj=instance
+        )
+    except Exception as e:
+        logger.error(f"Error logging audit for job deletion: {e}")
+    
     try:
         invalidate_job_cache(instance.id)
     except Exception as e:
@@ -77,6 +112,30 @@ def application_post_save_handler(sender, instance, created, **kwargs):
     """
     Handles post-save events for Application model to send email notifications and track status history.
     """
+    # Log audit
+    try:
+        if created:
+            AuditService.log_action(
+                action='create',
+                user=instance.applicant,
+                obj=instance
+            )
+        else:
+            # Check for status change
+            try:
+                old_instance = sender.objects.get(pk=instance.pk)
+                if old_instance.status != instance.status:
+                    AuditService.log_action(
+                        action='update',
+                        user=getattr(instance, '_changed_by', None),
+                        obj=instance,
+                        changes={'status': {'old': old_instance.status, 'new': instance.status}}
+                    )
+            except sender.DoesNotExist:
+                pass
+    except Exception as e:
+        logger.error(f"Error logging audit for application: {e}")
+    
     if not instance.applicant or not instance.job or not instance.job.employer:
         logger.warning(f"Skipping application email for ID {instance.id} due to missing related data.")
         return
@@ -204,6 +263,16 @@ def application_pre_delete_handler(sender, instance, **kwargs):
     """
     Handle pre-delete events for Application model to clean up files.
     """
+    # Log audit
+    try:
+        AuditService.log_action(
+            action='delete',
+            user=getattr(instance, '_deleted_by', None),
+            obj=instance
+        )
+    except Exception as e:
+        logger.error(f"Error logging audit for application deletion: {e}")
+    
     try:
         cleanup_application_files(instance)
     except Exception as e:
