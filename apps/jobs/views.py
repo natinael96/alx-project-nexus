@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_yasg import openapi  # noqa: F401 - may be used for future parameter docs
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from .models import Job, Category, Application
@@ -60,22 +60,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='List all categories',
-        operation_description='Get a list of all job categories with their children and job counts. Public read access.',
-        manual_parameters=[
-            openapi.Parameter(
-                'search',
-                openapi.IN_QUERY,
-                description='Search categories by name, description, or slug',
-                type=openapi.TYPE_STRING
-            ),
-            openapi.Parameter(
-                'ordering',
-                openapi.IN_QUERY,
-                description='Order results by field (name, created_at, -name, -created_at)',
-                type=openapi.TYPE_STRING,
-                enum=['name', 'created_at', '-name', '-created_at']
-            ),
-        ],
+        operation_description='Get a list of all job categories with their children and job counts. Public read access. Supports: search (name, description, slug), ordering (name, created_at).',
         responses={
             200: CategorySerializer(many=True),
             401: 'Unauthorized',
@@ -204,78 +189,7 @@ class JobViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='List all jobs',
-        operation_description='Get a paginated list of jobs with advanced filtering and search options. Public access (non-authenticated users see only active jobs).',
-        manual_parameters=[
-            openapi.Parameter(
-                'category',
-                openapi.IN_QUERY,
-                description='Filter by category ID (UUID)',
-                type=openapi.TYPE_STRING,
-                format=openapi.FORMAT_UUID
-            ),
-            openapi.Parameter(
-                'location',
-                openapi.IN_QUERY,
-                description='Filter by location (case-insensitive partial match)',
-                type=openapi.TYPE_STRING
-            ),
-            openapi.Parameter(
-                'job_type',
-                openapi.IN_QUERY,
-                description='Filter by job type',
-                type=openapi.TYPE_STRING,
-                enum=['full-time', 'part-time', 'contract', 'internship', 'freelance']
-            ),
-            openapi.Parameter(
-                'status',
-                openapi.IN_QUERY,
-                description='Filter by status (authenticated users only)',
-                type=openapi.TYPE_STRING,
-                enum=['draft', 'active', 'closed']
-            ),
-            openapi.Parameter(
-                'min_salary',
-                openapi.IN_QUERY,
-                description='Filter by minimum salary (greater than or equal)',
-                type=openapi.TYPE_NUMBER
-            ),
-            openapi.Parameter(
-                'max_salary',
-                openapi.IN_QUERY,
-                description='Filter by maximum salary (less than or equal)',
-                type=openapi.TYPE_NUMBER
-            ),
-            openapi.Parameter(
-                'is_featured',
-                openapi.IN_QUERY,
-                description='Filter featured jobs (true/false)',
-                type=openapi.TYPE_BOOLEAN
-            ),
-            openapi.Parameter(
-                'search',
-                openapi.IN_QUERY,
-                description='Full-text search in title, description, and requirements',
-                type=openapi.TYPE_STRING
-            ),
-            openapi.Parameter(
-                'ordering',
-                openapi.IN_QUERY,
-                description='Order results by field (created_at, salary_min, salary_max, views_count). Prefix with - for descending.',
-                type=openapi.TYPE_STRING
-            ),
-            openapi.Parameter(
-                'page',
-                openapi.IN_QUERY,
-                description='Page number for pagination',
-                type=openapi.TYPE_INTEGER
-            ),
-            openapi.Parameter(
-                'page_size',
-                openapi.IN_QUERY,
-                description='Number of items per page (max 100)',
-                type=openapi.TYPE_INTEGER
-            ),
-        ],
+        operation_description='Get a paginated list of jobs with advanced filtering and search options. Public access (non-authenticated users see only active jobs). Supports filters: category (UUID), location, job_type, status, min_salary, max_salary, is_featured, search, ordering, page, page_size.',
         responses={
             200: JobListSerializer(many=True),
             401: 'Unauthorized',
@@ -489,8 +403,15 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Application.objects.none()
+        
         queryset = super().get_queryset()
         user = self.request.user
+        
+        if not user.is_authenticated:
+            return Application.objects.none()
         
         if user.is_admin:
             # Admins can see all applications
@@ -510,41 +431,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     
     @swagger_auto_schema(
         operation_summary='List applications',
-        operation_description='Get a paginated list of applications. Results are filtered by user role: Admin sees all, Employer sees applications for their jobs, User sees only their own applications.',
-        manual_parameters=[
-            openapi.Parameter(
-                'status',
-                openapi.IN_QUERY,
-                description='Filter by application status',
-                type=openapi.TYPE_STRING,
-                enum=['pending', 'reviewed', 'accepted', 'rejected']
-            ),
-            openapi.Parameter(
-                'job',
-                openapi.IN_QUERY,
-                description='Filter by job ID (UUID)',
-                type=openapi.TYPE_STRING,
-                format=openapi.FORMAT_UUID
-            ),
-            openapi.Parameter(
-                'ordering',
-                openapi.IN_QUERY,
-                description='Order results by field (applied_at, status). Prefix with - for descending.',
-                type=openapi.TYPE_STRING
-            ),
-            openapi.Parameter(
-                'page',
-                openapi.IN_QUERY,
-                description='Page number for pagination',
-                type=openapi.TYPE_INTEGER
-            ),
-            openapi.Parameter(
-                'page_size',
-                openapi.IN_QUERY,
-                description='Number of items per page (max 100)',
-                type=openapi.TYPE_INTEGER
-            ),
-        ],
+        operation_description='Get a paginated list of applications. Results are filtered by user role: Admin sees all, Employer sees applications for their jobs, User sees only their own applications. Supports filters: status, job (UUID), ordering, page, page_size.',
         responses={
             200: ApplicationSerializer(many=True),
             401: 'Unauthorized',

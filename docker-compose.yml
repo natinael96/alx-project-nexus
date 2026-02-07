@@ -56,41 +56,38 @@ services:
       - jobboard_network
     restart: unless-stopped
 
-  celery_worker:
-    build: .
-    container_name: jobboard_celery_worker
-    command: celery -A config worker --loglevel=info
-    volumes:
-      - .:/app
-    env_file:
-      - .env
-    depends_on:
-      # db:  # Comment out if using external database
-      #   condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - jobboard_network
-    restart: unless-stopped
+  # Celery workers - uncomment for production or when async tasks are needed
+  # celery_worker:
+  #   build: .
+  #   container_name: jobboard_celery_worker
+  #   command: celery -A config worker --loglevel=info
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - jobboard_network
+  #   restart: unless-stopped
 
-  celery_beat:
-    build: .
-    container_name: jobboard_celery_beat
-    command: celery -A config beat --loglevel=info
-    volumes:
-      - .:/app
-    env_file:
-      - .env
-    depends_on:
-      # db:  # Comment out if using external database
-      #   condition: service_healthy
-      redis:
-        condition: service_healthy
-      celery_worker:
-        condition: service_started
-    networks:
-      - jobboard_network
-    restart: unless-stopped
+  # celery_beat:
+  #   build: .
+  #   container_name: jobboard_celery_beat
+  #   command: celery -A config beat --loglevel=info
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #     celery_worker:
+  #       condition: service_started
+  #   networks:
+  #     - jobboard_network
+  #   restart: unless-stopped
 
   nginx:
     image: nginx:alpine

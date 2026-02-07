@@ -165,6 +165,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     Comprehensive user profile serializer with all enhancements.
     """
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
     skills = SkillSerializer(many=True, read_only=True)
     education = EducationSerializer(many=True, read_only=True)
     work_history = WorkHistorySerializer(many=True, read_only=True)

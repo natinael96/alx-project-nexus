@@ -99,6 +99,12 @@ class ApplicationNoteViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return notes for applications the user can access."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ApplicationNote.objects.none()
+        if not self.request.user.is_authenticated:
+            return ApplicationNote.objects.none()
+        
         if self.request.user.is_admin:
             return ApplicationNote.objects.all()
         # Employers can only see notes for their jobs
@@ -120,6 +126,12 @@ class ApplicationStatusHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         """Return status history for applications the user can access."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ApplicationStatusHistory.objects.none()
+        if not self.request.user.is_authenticated:
+            return ApplicationStatusHistory.objects.none()
+        
         if self.request.user.is_admin:
             return ApplicationStatusHistory.objects.all()
         elif self.request.user.is_employer:
@@ -173,6 +185,12 @@ class ScreeningAnswerViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return answers for applications the user can access."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ScreeningAnswer.objects.none()
+        if not self.request.user.is_authenticated:
+            return ScreeningAnswer.objects.none()
+        
         if self.request.user.is_admin or self.request.user.is_employer:
             return ScreeningAnswer.objects.filter(
                 application__job__employer=self.request.user
@@ -222,6 +240,12 @@ class InterviewViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return interviews the user can access."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return Interview.objects.none()
+        if not self.request.user.is_authenticated:
+            return Interview.objects.none()
+        
         if self.request.user.is_admin:
             return Interview.objects.all()
         elif self.request.user.is_employer:
@@ -248,6 +272,12 @@ class ApplicationScoreViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return scores for applications the user can access."""
+        # Handle schema generation (swagger/redoc)
+        if getattr(self, 'swagger_fake_view', False):
+            return ApplicationScore.objects.none()
+        if not self.request.user.is_authenticated:
+            return ApplicationScore.objects.none()
+        
         if self.request.user.is_admin:
             return ApplicationScore.objects.all()
         return ApplicationScore.objects.filter(
