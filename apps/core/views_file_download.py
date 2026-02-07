@@ -16,6 +16,7 @@ from apps.accounts.models import User
 from apps.core.file_management import FileAccessControl
 from apps.core.storage import storage_manager
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +26,6 @@ logger = logging.getLogger(__name__)
     operation_summary='Download resume',
     operation_description='Download a resume file from an application. Access is restricted: Applicants can download their own resumes, Employers can download resumes for their jobs, Admins can download all resumes.',
     manual_parameters=[
-        openapi.Parameter(
-            'application_id',
-            openapi.IN_PATH,
-            description='Application ID (UUID)',
-            type=openapi.TYPE_STRING,
-            format=openapi.FORMAT_UUID,
-            required=True
-        ),
         openapi.Parameter(
             'signed',
             openapi.IN_QUERY,
@@ -126,16 +119,6 @@ def download_resume(request, application_id):
     method='get',
     operation_summary='Download profile picture',
     operation_description='Download a user profile picture. Users can download their own profile pictures, and profile pictures are generally public.',
-    manual_parameters=[
-        openapi.Parameter(
-            'user_id',
-            openapi.IN_PATH,
-            description='User ID (UUID)',
-            type=openapi.TYPE_STRING,
-            format=openapi.FORMAT_UUID,
-            required=True
-        ),
-    ],
     responses={
         200: 'Image file download',
         401: 'Unauthorized',
