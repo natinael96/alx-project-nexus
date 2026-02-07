@@ -6,6 +6,13 @@ from django.utils.html import format_html
 from django.db.models import Count
 from .models import Job, Category, Application
 
+# Import enhancement admins
+from . import admin_job_enhancements  # noqa
+from . import admin_application_enhancements  # noqa
+
+# Import search admin
+from . import admin_search  # noqa
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

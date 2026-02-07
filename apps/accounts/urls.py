@@ -1,7 +1,7 @@
 """
 URL configuration for accounts app.
 """
-from django.urls import path
+from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
@@ -19,5 +19,8 @@ urlpatterns = [
     # User management (Admin only)
     path('users/', views.UserListAPIView.as_view(), name='user-list'),
     path('users/<int:pk>/', views.UserDetailAPIView.as_view(), name='user-detail'),
+    
+    # Profile endpoints
+    path('profile/', include('apps.accounts.urls_profile')),
 ]
 

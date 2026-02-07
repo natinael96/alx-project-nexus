@@ -35,11 +35,20 @@ urlpatterns = [
     # API endpoints
     path('api/auth/', include('apps.accounts.urls')),
     path('api/jobs/', include('apps.jobs.urls')),
+    path('api/jobs/', include('apps.jobs.urls_job_enhancements')),
     path('api/categories/', include('apps.jobs.urls_category')),
     path('api/applications/', include('apps.jobs.urls_application')),
+    path('api/applications/', include('apps.jobs.urls_application_enhancements')),
+    path('api/search/', include('apps.jobs.urls_search')),
     
     # Health checks and monitoring
     path('health/', include('apps.core.urls')),
+    
+    # File downloads (secure)
+    path('api/files/', include('apps.core.urls')),
+    
+    # Notifications
+    path('api/notifications/', include('apps.core.urls_notifications')),
 ]
 
 # Serve media files in development

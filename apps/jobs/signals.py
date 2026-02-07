@@ -2,11 +2,14 @@
 Django signals for jobs app.
 """
 import logging
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_delete
 from django.dispatch import receiver
 from apps.core.email_service import EmailService
+from apps.jobs.tasks import send_email_async
 from apps.core.cache_utils import invalidate_category_cache, invalidate_job_cache
+from apps.core.file_management import cleanup_application_files
 from .models import Job, Application, Category
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +58,7 @@ def job_post_delete_handler(sender, instance, **kwargs):
 @receiver(post_save, sender=Application)
 def application_post_save_handler(sender, instance, created, **kwargs):
     """
-    Handles post-save events for Application model to send email notifications.
+    Handles post-save events for Application model to send email notifications and track status history.
     """
     if not instance.applicant or not instance.job or not instance.job.employer:
         logger.warning(f"Skipping application email for ID {instance.id} due to missing related data.")
@@ -73,16 +76,46 @@ def application_post_save_handler(sender, instance, created, **kwargs):
             EmailService.send_new_application_notification(instance)
         except Exception as e:
             logger.error(f"Failed to send new application notification for Application ID {instance.id}: {e}")
+        
+        # Create initial status history
+        try:
+            from apps.jobs.models_application_enhancements import ApplicationStatusHistory
+            ApplicationStatusHistory.objects.create(
+                application=instance,
+                old_status=None,
+                new_status=instance.status,
+                changed_by=None,  # System
+                reason='Application submitted'
+            )
+        except Exception as e:
+            logger.error(f"Failed to create status history for Application ID {instance.id}: {e}")
     else:
-        # Check if status has changed to send notification
+        # Check if status has changed to send notification and track history
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             if old_instance.status != instance.status:
-                EmailService.send_application_status_update(instance, old_instance.status)
+                # Send email notification
+                try:
+                    EmailService.send_application_status_update(instance, old_instance.status)
+                except Exception as e:
+                    logger.error(f"Failed to send application status update for Application ID {instance.id}: {e}")
+                
+                # Create status history
+                try:
+                    from apps.jobs.models_application_enhancements import ApplicationStatusHistory
+                    ApplicationStatusHistory.objects.create(
+                        application=instance,
+                        old_status=old_instance.status,
+                        new_status=instance.status,
+                        changed_by=getattr(instance, '_status_changed_by', None),  # Set in view
+                        reason=getattr(instance, '_status_change_reason', '')
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to create status history for Application ID {instance.id}: {e}")
         except sender.DoesNotExist:
             logger.warning(f"Application instance with ID {instance.id} not found for status change check.")
         except Exception as e:
-            logger.error(f"Failed to send application status update for Application ID {instance.id}: {e}")
+            logger.error(f"Failed to process application status update for Application ID {instance.id}: {e}")
 
 
 @receiver(post_save, sender=Category)
@@ -105,3 +138,14 @@ def category_post_delete_handler(sender, instance, **kwargs):
         invalidate_category_cache(instance.id)
     except Exception as e:
         logger.error(f"Failed to invalidate category cache after deletion: {e}")
+
+
+@receiver(pre_delete, sender=Application)
+def application_pre_delete_handler(sender, instance, **kwargs):
+    """
+    Handle pre-delete events for Application model to clean up files.
+    """
+    try:
+        cleanup_application_files(instance)
+    except Exception as e:
+        logger.error(f"Failed to clean up application files: {e}")

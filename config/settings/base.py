@@ -150,6 +150,29 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# File Storage Configuration
+FILE_STORAGE_BACKEND = config('FILE_STORAGE_BACKEND', default='local')  # local, supabase, s3
+
+# Supabase Storage Configuration
+SUPABASE_URL = config('SUPABASE_URL', default='')
+SUPABASE_KEY = config('SUPABASE_KEY', default='')
+SUPABASE_STORAGE_BUCKET = config('SUPABASE_STORAGE_BUCKET', default='files')
+
+# AWS S3 Configuration (alternative to Supabase)
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default='')  # For CDN
+
+# File Processing Configuration
+ENABLE_VIRUS_SCANNING = config('ENABLE_VIRUS_SCANNING', default=False, cast=bool)
+ENABLE_IMAGE_OPTIMIZATION = config('ENABLE_IMAGE_OPTIMIZATION', default=True, cast=bool)
+ENABLE_RESUME_PARSING = config('ENABLE_RESUME_PARSING', default=True, cast=bool)
+MAX_IMAGE_WIDTH = config('MAX_IMAGE_WIDTH', default=800, cast=int)
+MAX_IMAGE_HEIGHT = config('MAX_IMAGE_HEIGHT', default=800, cast=int)
+IMAGE_QUALITY = config('IMAGE_QUALITY', default=85, cast=int)
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -374,3 +397,43 @@ os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 SITE_NAME = config('SITE_NAME', default='Job Board Platform')
 SITE_URL = config('SITE_URL', default='http://localhost:8000')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.com')
+
+# Celery Configuration
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Celery Task Settings
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_DEAD = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
+
+# Celery Beat (Scheduled Tasks)
+CELERY_BEAT_SCHEDULE = {
+    'process-job-expiration': {
+        'task': 'apps.jobs.tasks.process_job_expiration',
+        'schedule': 3600.0,  # Run every hour
+    },
+    'process-scheduled-jobs': {
+        'task': 'apps.jobs.tasks.process_scheduled_jobs',
+        'schedule': 300.0,  # Run every 5 minutes
+    },
+    'send-application-deadline-reminders': {
+        'task': 'apps.jobs.tasks.send_application_deadline_reminders',
+        'schedule': 86400.0,  # Run daily
+    },
+    'cleanup-old-notifications': {
+        'task': 'apps.core.tasks.cleanup_old_notifications',
+        'schedule': 86400.0,  # Run daily
+    },
+    'generate-daily-reports': {
+        'task': 'apps.core.tasks.generate_daily_reports',
+        'schedule': 86400.0,  # Run daily at midnight
+    },
+}

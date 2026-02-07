@@ -259,6 +259,50 @@ class Job(models.Model):
         db_index=True,
         help_text='Job posting status'
     )
+    approval_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending Approval'),
+            ('approved', 'Approved'),
+            ('rejected', 'Rejected'),
+        ],
+        default='pending',
+        db_index=True,
+        help_text='Admin approval status'
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_jobs',
+        help_text='Admin who approved this job'
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this job was approved'
+    )
+    scheduled_publish_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Schedule job to be published at this date/time'
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Job expiration date (auto-closes after this)'
+    )
+    auto_renew = models.BooleanField(
+        default=False,
+        help_text='Automatically renew job when it expires'
+    )
+    renewal_count = models.PositiveIntegerField(
+        default=0,
+        help_text='Number of times this job has been renewed'
+    )
     application_deadline = models.DateField(
         null=True,
         blank=True,
@@ -402,6 +446,28 @@ class Application(models.Model):
         null=True,
         help_text='Internal notes about the application (employer/admin only)'
     )
+    is_withdrawn = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='Whether application has been withdrawn'
+    )
+    withdrawn_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When application was withdrawn'
+    )
+    withdrawal_reason = models.TextField(
+        blank=True,
+        help_text='Reason for withdrawal'
+    )
+    template = models.ForeignKey(
+        'jobs.ApplicationTemplate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='applications',
+        help_text='Application template used'
+    )
     
     class Meta:
         db_table = 'applications'
@@ -413,6 +479,7 @@ class Application(models.Model):
             models.Index(fields=['status', '-applied_at']),
             models.Index(fields=['job', 'status']),
             models.Index(fields=['applicant', 'status']),
+            models.Index(fields=['is_withdrawn', '-applied_at']),
         ]
     
     def __str__(self):

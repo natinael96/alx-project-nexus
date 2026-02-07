@@ -27,8 +27,12 @@ from apps.core.rate_limit import (
     rate_limit, RATE_LIMITS, rate_limit_search,
     rate_limit_application_submit
 )
+from apps.jobs.search_service import AdvancedSearchService
 from django.core.cache import cache
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -290,10 +294,34 @@ class JobViewSet(viewsets.ModelViewSet):
     )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Increment view count atomically
-        instance.increment_views()
+        # Only increment views for active jobs
+        if instance.status == 'active':
+            instance.increment_views()
+            
+            # Track detailed view analytics
+            try:
+                from .models_job_enhancements import JobView
+                JobView.objects.create(
+                    job=instance,
+                    user=request.user if request.user.is_authenticated else None,
+                    ip_address=self._get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    referrer=request.META.get('HTTP_REFERER', '')
+                )
+            except Exception as e:
+                logger.warning(f"Failed to track job view: {e}")
+        
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+    
+    def _get_client_ip(self, request):
+        """Get client IP address."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
     
     @swagger_auto_schema(
         operation_summary='Create a new job',
@@ -352,6 +380,12 @@ class JobViewSet(viewsets.ModelViewSet):
         old_status = instance.status  # Store old status for email
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        
+        # Store status change info for signal
+        if 'status' in request.data and old_status != request.data.get('status'):
+            serializer.instance._status_changed_by = request.user
+            serializer.instance._status_change_reason = request.data.get('status_change_reason', '')
+        
         self.perform_update(serializer)
         
         # Send status change notification if status changed
@@ -587,6 +621,12 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         old_status = instance.status  # Store old status for email
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        
+        # Store status change info for signal
+        if 'status' in request.data and old_status != request.data.get('status'):
+            serializer.instance._status_changed_by = request.user
+            serializer.instance._status_change_reason = request.data.get('status_change_reason', '')
+        
         self.perform_update(serializer)
         
         # Send status update email if status changed
@@ -597,8 +637,6 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                     old_status
                 )
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send application status update email: {str(e)}")
         
         return Response(serializer.data)

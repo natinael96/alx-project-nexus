@@ -3,6 +3,7 @@ URL configuration for core app - Health checks and monitoring.
 """
 from django.urls import path
 from . import views
+from . import views_file_download
 
 app_name = 'core'
 
@@ -18,4 +19,8 @@ urlpatterns = [
     path('statistics/jobs/', views.job_statistics_view, name='job-statistics'),
     path('statistics/applications/', views.application_statistics_view, name='application-statistics'),
     path('statistics/user-activity/', views.user_activity_view, name='user-activity'),
+    
+    # File downloads
+    path('files/resumes/<int:application_id>/', views_file_download.download_resume, name='download-resume'),
+    path('files/profiles/<int:user_id>/', views_file_download.download_profile_picture, name='download-profile-picture'),
 ]
