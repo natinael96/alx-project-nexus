@@ -60,6 +60,64 @@ DATABASES['default'].update({
     }
 })
 
+# Cache configuration for production (Redis)
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config(
+            'CACHE_LOCATION',
+            default='redis://127.0.0.1:6379/1'
+        ),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'IGNORE_EXCEPTIONS': False,  # Raise exceptions in production
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+        },
+        'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
+        'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
+    }
+}
+
 # Static files (use WhiteNoise or CDN in production)
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
+# Sentry Error Tracking (Optional - configure if using Sentry)
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    
+    SENTRY_DSN = config('SENTRY_DSN', default='')
+    if SENTRY_DSN:
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[
+                DjangoIntegration(
+                    transaction_style='url',
+                    middleware_spans=True,
+                    signals_spans=True,
+                ),
+                LoggingIntegration(
+                    level=logging.INFO,  # Capture info and above as breadcrumbs
+                    event_level=logging.ERROR  # Send errors as events
+                ),
+            ],
+            traces_sample_rate=config('SENTRY_TRACES_SAMPLE_RATE', default=0.1, cast=float),
+            send_default_pii=True,  # Send user information
+            environment=config('ENVIRONMENT', default='production'),
+            release=config('RELEASE_VERSION', default='1.0.0'),
+        )
+except ImportError:
+    # Sentry SDK not installed
+    pass
+except Exception as e:
+    # Sentry configuration failed, log but don't crash
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Sentry initialization failed: {str(e)}")

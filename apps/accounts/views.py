@@ -18,6 +18,10 @@ from .serializers import (
     ChangePasswordSerializer
 )
 from .permissions import IsAdminUser
+from apps.core.rate_limit import (
+    rate_limit, RATE_LIMITS,
+    rate_limit_login, rate_limit_register
+)
 
 
 @swagger_auto_schema(
@@ -29,6 +33,12 @@ from .permissions import IsAdminUser
     },
     operation_summary='Register a new user',
     operation_description='Create a new user account with role-based access (admin, employer, user). Passwords are validated for strength.'
+)
+@rate_limit(
+    limit=RATE_LIMITS['register']['limit'],
+    period=RATE_LIMITS['register']['period'],
+    key_func=rate_limit_register,
+    scope='register'
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -82,6 +92,12 @@ def register_user(request):
     },
     operation_summary='User login',
     operation_description='Authenticate user and return JWT tokens. Uses generic error messages to prevent user enumeration.'
+)
+@rate_limit(
+    limit=RATE_LIMITS['login']['limit'],
+    period=RATE_LIMITS['login']['period'],
+    key_func=rate_limit_login,
+    scope='login'
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])

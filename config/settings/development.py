@@ -35,3 +35,16 @@ DATABASES['default'].update({
 if DEBUG:
     STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Cache configuration for development (fallback to local memory if Redis not available)
+CACHES = {
+    'default': {
+        'BACKEND': config(
+            'CACHE_BACKEND',
+            default='django.core.cache.backends.locmem.LocMemCache'
+        ),
+        'LOCATION': config(
+            'CACHE_LOCATION',
+            default='unique-snowflake'
+        ),
+    }
+}

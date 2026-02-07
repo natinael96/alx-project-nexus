@@ -22,6 +22,13 @@ from .filters import JobFilter, ApplicationFilter
 from .permissions import IsJobOwnerOrAdmin, CanApplyForJob, CanManageCategory
 from apps.accounts.permissions import IsEmployerOrAdmin, IsAdminUser
 from apps.core.email_service import EmailService
+from apps.core.cache_utils import CacheKeyBuilder, invalidate_category_cache, invalidate_job_cache
+from apps.core.rate_limit import (
+    rate_limit, RATE_LIMITS, rate_limit_search,
+    rate_limit_application_submit
+)
+from django.core.cache import cache
+from django.conf import settings
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -85,7 +92,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
         }
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        """Create category and invalidate cache."""
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == 201:
+            invalidate_category_cache()
+        return response
     
     @swagger_auto_schema(
         operation_summary='Get category details',
@@ -111,7 +122,12 @@ class CategoryViewSet(viewsets.ModelViewSet):
         }
     )
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        """Update category and invalidate cache."""
+        category_id = kwargs.get('pk')
+        response = super().update(request, *args, **kwargs)
+        if response.status_code == 200:
+            invalidate_category_cache(category_id)
+        return response
     
     @swagger_auto_schema(
         operation_summary='Delete category',
@@ -124,7 +140,12 @@ class CategoryViewSet(viewsets.ModelViewSet):
         }
     )
     def destroy(self, request, *args, **kwargs):
-        return super().destroy(request, *args, **kwargs)
+        """Delete job and invalidate cache."""
+        job_id = kwargs.get('pk')
+        response = super().destroy(request, *args, **kwargs)
+        if response.status_code == 204:
+            invalidate_job_cache(job_id)
+        return response
 
 
 class JobViewSet(viewsets.ModelViewSet):
@@ -285,10 +306,18 @@ class JobViewSet(viewsets.ModelViewSet):
             403: 'Forbidden - Employer/Admin access required',
         }
     )
+    @rate_limit(
+        limit=RATE_LIMITS['job_create']['limit'],
+        period=RATE_LIMITS['job_create']['period'],
+        scope='job_create'
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        
+        # Invalidate job cache
+        invalidate_job_cache()
         
         # Send job posted confirmation email
         try:
@@ -337,6 +366,9 @@ class JobViewSet(viewsets.ModelViewSet):
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send job status change email: {str(e)}")
         
+        # Invalidate job cache
+        invalidate_job_cache(serializer.instance.id)
+        
         return Response(JobDetailSerializer(serializer.instance).data)
     
     @swagger_auto_schema(
@@ -350,7 +382,12 @@ class JobViewSet(viewsets.ModelViewSet):
         }
     )
     def destroy(self, request, *args, **kwargs):
-        return super().destroy(request, *args, **kwargs)
+        """Delete job and invalidate cache."""
+        job_id = kwargs.get('pk')
+        response = super().destroy(request, *args, **kwargs)
+        if response.status_code == 204:
+            invalidate_job_cache(job_id)
+        return response
     
     @swagger_auto_schema(
         method='get',
@@ -362,13 +399,29 @@ class JobViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def featured(self, request):
-        """Get featured active jobs."""
+        """Get featured active jobs with caching."""
+        cache_key = CacheKeyBuilder.featured_jobs(limit=10)
+        cached_data = cache.get(cache_key)
+        
+        if cached_data is not None:
+            return Response(cached_data)
+        
+        # Get fresh data
         featured_jobs = self.get_queryset().filter(
             is_featured=True,
             status='active'
         )[:10]
         serializer = JobListSerializer(featured_jobs, many=True)
-        return Response(serializer.data)
+        response_data = serializer.data
+        
+        # Cache the response
+        cache.set(
+            cache_key,
+            response_data,
+            settings.CACHE_TIMEOUT_MEDIUM
+        )
+        
+        return Response(response_data)
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):

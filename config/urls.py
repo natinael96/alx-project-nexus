@@ -37,6 +37,9 @@ urlpatterns = [
     path('api/jobs/', include('apps.jobs.urls')),
     path('api/categories/', include('apps.jobs.urls_category')),
     path('api/applications/', include('apps.jobs.urls_application')),
+    
+    # Health checks and monitoring
+    path('health/', include('apps.core.urls')),
 ]
 
 # Serve media files in development

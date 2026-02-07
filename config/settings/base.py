@@ -44,6 +44,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Custom middleware for logging and monitoring
+    'apps.core.middleware.APILoggingMiddleware',
+    'apps.core.middleware.PerformanceMonitoringMiddleware',
+    'apps.core.middleware.DatabaseQueryLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -106,6 +110,36 @@ LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True
 USE_TZ = True
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': config(
+            'CACHE_BACKEND',
+            default='django.core.cache.backends.redis.RedisCache'
+        ),
+        'LOCATION': config(
+            'CACHE_LOCATION',
+            default='redis://127.0.0.1:6379/1'
+        ),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'IGNORE_EXCEPTIONS': True,  # Fail silently if Redis is unavailable
+        },
+        'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
+        'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),  # 5 minutes default
+    }
+}
+
+# Cache key naming strategy
+CACHE_KEY_PREFIX = config('CACHE_KEY_PREFIX', default='jobboard')
+CACHE_TIMEOUT_SHORT = 60  # 1 minute
+CACHE_TIMEOUT_MEDIUM = 300  # 5 minutes
+CACHE_TIMEOUT_LONG = 3600  # 1 hour
+CACHE_TIMEOUT_VERY_LONG = 86400  # 24 hours
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = config('STATIC_URL', default='/static/')
@@ -229,31 +263,105 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d',
+        },
+        'django.server': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '[{server_time}] {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'level': config('LOG_LEVEL', default='INFO'),
         },
         'file': {
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
             'formatter': 'verbose',
+            'level': config('LOG_LEVEL', default='INFO'),
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'errors.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'level': 'ERROR',
+        },
+        'api_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'api.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'json',
+            'level': 'INFO',
+        },
+        'performance_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'performance.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'json',
+            'level': 'INFO',
+        },
+        'django.server': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'django.server',
         },
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['console', 'file'],
         'level': config('LOG_LEVEL', default='INFO'),
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'file', 'error_file'],
             'level': config('LOG_LEVEL', default='INFO'),
             'propagate': False,
         },
-        'apps': {
+        'django.server': {
+            'handlers': ['django.server'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
             'handlers': ['console', 'file'],
+            'level': config('DB_LOG_LEVEL', default='WARNING'),  # Set to DEBUG to log all queries
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['file', 'error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console', 'file', 'error_file'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps.api': {
+            'handlers': ['api_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.performance': {
+            'handlers': ['performance_file', 'console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },
