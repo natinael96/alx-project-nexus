@@ -23,6 +23,8 @@ Pillow==10.2.0
 
 # Production Server
 gunicorn==21.2.0
+whitenoise==6.6.0
+dj-database-url==2.1.0
 
 # Database Migrations
 django-extensions==3.2.3
@@ -69,7 +71,4 @@ python-docx==1.1.0
 pyclamd==0.4.0
 django-cleanup==8.0.0
 
-# Background Tasks
-celery==5.6.2
-django-celery-beat==2.8.1
 

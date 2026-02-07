@@ -1,7 +1,6 @@
 """
-Celery tasks for jobs app.
+Background tasks for jobs app (synchronous).
 """
-from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
 from apps.jobs.models import Job, Application
@@ -12,8 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=3)
-def process_job_expiration(self):
+def process_job_expiration():
     """
     Process job expiration and auto-close expired jobs.
     """
@@ -23,21 +21,19 @@ def process_job_expiration(self):
             status='active',
             expires_at__lte=now
         )
-        
+
         closed_count = 0
         renewed_count = 0
-        
+
         for job in expired_jobs:
             try:
                 if job.auto_renew:
-                    # Renew the job
-                    renewal_days = 30  # Default renewal period
+                    renewal_days = 30
                     job.expires_at = now + timedelta(days=renewal_days)
                     job.renewal_count += 1
                     job.save(update_fields=['expires_at', 'renewal_count'])
                     renewed_count += 1
-                    
-                    # Notify employer
+
                     NotificationService.create_notification(
                         user=job.employer,
                         notification_type='job_posted',
@@ -49,12 +45,10 @@ def process_job_expiration(self):
                         related_object_id=job.id
                     )
                 else:
-                    # Close the job
                     job.status = 'closed'
                     job.save(update_fields=['status'])
                     closed_count += 1
-                    
-                    # Notify employer
+
                     NotificationService.create_notification(
                         user=job.employer,
                         notification_type='system',
@@ -67,7 +61,7 @@ def process_job_expiration(self):
                     )
             except Exception as e:
                 logger.error(f"Error processing job {job.id}: {e}")
-        
+
         logger.info(f"Processed {expired_jobs.count()} expired jobs. Closed: {closed_count}, Renewed: {renewed_count}")
         return {
             'processed': expired_jobs.count(),
@@ -75,12 +69,10 @@ def process_job_expiration(self):
             'renewed': renewed_count
         }
     except Exception as e:
-        logger.error(f"Error in process_job_expiration task: {e}")
-        raise self.retry(exc=e, countdown=60)
+        logger.error(f"Error in process_job_expiration: {e}")
 
 
-@shared_task(bind=True, max_retries=3)
-def process_scheduled_jobs(self):
+def process_scheduled_jobs():
     """
     Publish scheduled jobs that are ready to be published.
     """
@@ -91,17 +83,16 @@ def process_scheduled_jobs(self):
             scheduled_publish_date__lte=now,
             approval_status='approved'
         )
-        
+
         published_count = 0
-        
+
         for job in scheduled_jobs:
             try:
                 job.status = 'active'
                 job.scheduled_publish_date = None
                 job.save(update_fields=['status', 'scheduled_publish_date'])
                 published_count += 1
-                
-                # Notify employer
+
                 NotificationService.create_notification(
                     user=job.employer,
                     notification_type='job_posted',
@@ -114,16 +105,14 @@ def process_scheduled_jobs(self):
                 )
             except Exception as e:
                 logger.error(f"Error publishing job {job.id}: {e}")
-        
+
         logger.info(f"Published {published_count} scheduled jobs")
         return {'published': published_count}
     except Exception as e:
-        logger.error(f"Error in process_scheduled_jobs task: {e}")
-        raise self.retry(exc=e, countdown=60)
+        logger.error(f"Error in process_scheduled_jobs: {e}")
 
 
-@shared_task(bind=True, max_retries=3)
-def send_application_deadline_reminders(self):
+def send_application_deadline_reminders():
     """
     Send reminders for applications approaching deadline.
     """
@@ -133,12 +122,11 @@ def send_application_deadline_reminders(self):
             status='active',
             application_deadline=tomorrow
         )
-        
+
         reminder_count = 0
-        
+
         for job in jobs_ending_soon:
             try:
-                # Notify employer
                 NotificationService.create_notification(
                     user=job.employer,
                     notification_type='application_deadline',
@@ -152,124 +140,70 @@ def send_application_deadline_reminders(self):
                 reminder_count += 1
             except Exception as e:
                 logger.error(f"Error sending reminder for job {job.id}: {e}")
-        
+
         logger.info(f"Sent {reminder_count} application deadline reminders")
         return {'reminders_sent': reminder_count}
     except Exception as e:
-        logger.error(f"Error in send_application_deadline_reminders task: {e}")
-        raise self.retry(exc=e, countdown=60)
+        logger.error(f"Error in send_application_deadline_reminders: {e}")
 
 
-@shared_task(bind=True, max_retries=3)
-def send_email_async(self, email_type, **kwargs):
+def send_email_sync(email_type, **kwargs):
     """
-    Send email asynchronously.
-    
+    Send email synchronously.
+
     Args:
         email_type: Type of email to send
         **kwargs: Email parameters
     """
     try:
         if email_type == 'application_confirmation':
-            # Handle both application object and application_id for backward compatibility
-            if 'application_id' in kwargs:
-                from apps.jobs.models import Application
-                try:
-                    application = Application.objects.get(id=kwargs['application_id'])
-                except Application.DoesNotExist:
-                    logger.warning(f"Application with ID {kwargs['application_id']} not found. Skipping email notification.")
-                    return  # Silently skip if application doesn't exist (might have been deleted)
-            elif 'application' in kwargs:
-                application = kwargs['application']
-            else:
-                raise ValueError("Either 'application_id' or 'application' must be provided for application_confirmation")
-            EmailService.send_application_confirmation(application)
+            application = _get_application(kwargs)
+            if application:
+                EmailService.send_application_confirmation(application)
         elif email_type == 'new_application_notification':
-            # Handle both application object and application_id for backward compatibility
-            if 'application_id' in kwargs:
-                from apps.jobs.models import Application
-                try:
-                    application = Application.objects.get(id=kwargs['application_id'])
-                except Application.DoesNotExist:
-                    logger.warning(f"Application with ID {kwargs['application_id']} not found. Skipping email notification.")
-                    return  # Silently skip if application doesn't exist (might have been deleted)
-            elif 'application' in kwargs:
-                application = kwargs['application']
-            else:
-                raise ValueError("Either 'application_id' or 'application' must be provided for new_application_notification")
-            EmailService.send_new_application_notification(application)
+            application = _get_application(kwargs)
+            if application:
+                EmailService.send_new_application_notification(application)
         elif email_type == 'application_status_update':
-            # Handle both application object and application_id for backward compatibility
-            if 'application_id' in kwargs:
-                from apps.jobs.models import Application
-                try:
-                    application = Application.objects.get(id=kwargs['application_id'])
-                except Application.DoesNotExist:
-                    logger.warning(f"Application with ID {kwargs['application_id']} not found. Skipping email notification.")
-                    return  # Silently skip if application doesn't exist (might have been deleted)
-            elif 'application' in kwargs:
-                application = kwargs['application']
-            else:
-                raise ValueError("Either 'application_id' or 'application' must be provided for application_status_update")
-            EmailService.send_application_status_update(
-                application,
-                kwargs.get('old_status')
-            )
+            application = _get_application(kwargs)
+            if application:
+                EmailService.send_application_status_update(
+                    application,
+                    kwargs.get('old_status')
+                )
         elif email_type == 'job_posted_confirmation':
-            # Handle both job object and job_id for backward compatibility
-            if 'job_id' in kwargs:
-                from apps.jobs.models import Job
-                try:
-                    job = Job.objects.get(id=kwargs['job_id'])
-                except Job.DoesNotExist:
-                    logger.warning(f"Job with ID {kwargs['job_id']} not found. Skipping email notification.")
-                    return  # Silently skip if job doesn't exist (might have been deleted)
-            elif 'job' in kwargs:
-                job = kwargs['job']
-            else:
-                raise ValueError("Either 'job_id' or 'job' must be provided for job_posted_confirmation")
-            EmailService.send_job_posted_confirmation(job)
+            job = _get_job(kwargs)
+            if job:
+                EmailService.send_job_posted_confirmation(job)
         elif email_type == 'job_status_change':
-            # Handle both job object and job_id for backward compatibility
-            if 'job_id' in kwargs:
-                from apps.jobs.models import Job
-                try:
-                    job = Job.objects.get(id=kwargs['job_id'])
-                except Job.DoesNotExist:
-                    logger.warning(f"Job with ID {kwargs['job_id']} not found. Skipping email notification.")
-                    return  # Silently skip if job doesn't exist (might have been deleted)
-            elif 'job' in kwargs:
-                job = kwargs['job']
-            else:
-                raise ValueError("Either 'job_id' or 'job' must be provided for job_status_change")
-            EmailService.send_job_status_change_notification(
-                job,
-                kwargs.get('old_status')
-            )
+            job = _get_job(kwargs)
+            if job:
+                EmailService.send_job_status_change_notification(
+                    job,
+                    kwargs.get('old_status')
+                )
         else:
             logger.warning(f"Unknown email type: {email_type}")
-        
+
         return {'status': 'sent', 'email_type': email_type}
     except Exception as e:
         logger.error(f"Error sending email {email_type}: {e}")
-        raise self.retry(exc=e, countdown=60)
 
 
-@shared_task(bind=True, max_retries=3)
-def process_file_async(self, file_path, process_type, **kwargs):
+def process_file_sync(file_path, process_type, **kwargs):
     """
-    Process files asynchronously (resume parsing, image optimization, etc.).
-    
+    Process files synchronously (resume parsing, image optimization, etc.).
+
     Args:
         file_path: Path to file
-        process_type: Type of processing (resume_parse, image_optimize, pdf_thumbnail)
+        process_type: Type of processing
         **kwargs: Processing parameters
     """
     try:
         from apps.core.file_processing import (
             optimize_image, generate_pdf_thumbnail, parse_resume
         )
-        
+
         if process_type == 'resume_parse':
             result = parse_resume(file_path)
         elif process_type == 'image_optimize':
@@ -279,8 +213,31 @@ def process_file_async(self, file_path, process_type, **kwargs):
         else:
             logger.warning(f"Unknown process type: {process_type}")
             return {'status': 'error', 'message': f'Unknown process type: {process_type}'}
-        
+
         return {'status': 'completed', 'process_type': process_type, 'result': result}
     except Exception as e:
         logger.error(f"Error processing file {file_path}: {e}")
-        raise self.retry(exc=e, countdown=60)
+
+
+# --- Helper functions ---
+
+def _get_application(kwargs):
+    """Retrieve application from kwargs."""
+    if 'application_id' in kwargs:
+        try:
+            return Application.objects.get(id=kwargs['application_id'])
+        except Application.DoesNotExist:
+            logger.warning(f"Application with ID {kwargs['application_id']} not found.")
+            return None
+    return kwargs.get('application')
+
+
+def _get_job(kwargs):
+    """Retrieve job from kwargs."""
+    if 'job_id' in kwargs:
+        try:
+            return Job.objects.get(id=kwargs['job_id'])
+        except Job.DoesNotExist:
+            logger.warning(f"Job with ID {kwargs['job_id']} not found.")
+            return None
+    return kwargs.get('job')

@@ -11,11 +11,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-# Use environment variable for settings module, fallback to development
+# Use environment variable for settings module, fallback to auto-detection in __init__.py
 os.environ.setdefault(
     'DJANGO_SETTINGS_MODULE',
-    os.getenv('DJANGO_SETTINGS_MODULE', 'config.settings.development')
+    'config.settings'
 )
 
 application = get_wsgi_application()
-

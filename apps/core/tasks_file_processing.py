@@ -1,7 +1,6 @@
 """
-Celery tasks for file processing.
+File processing tasks (synchronous).
 """
-from celery import shared_task
 import logging
 from apps.core.file_processing import ImageProcessor, PDFProcessor, VirusScanner, ResumeProcessor
 from apps.core.storage import storage_manager
@@ -12,12 +11,11 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, default_retry_delay=300, max_retries=3)
-def process_uploaded_file_task(self, file_path, file_type, user_id=None, job_id=None, application_id=None):
+def process_uploaded_file(file_path, file_type, user_id=None, job_id=None, application_id=None):
     """
-    Celery task to process an uploaded file (e.g., image optimization, virus scanning, resume parsing).
+    Process an uploaded file (e.g., image optimization, virus scanning, resume parsing).
     """
-    logger.info(f"Starting file processing task for {file_path} (type: {file_type})")
+    logger.info(f"Starting file processing for {file_path} (type: {file_type})")
     try:
         # Retrieve the file from storage
         if not storage_manager.exists(file_path):
@@ -26,18 +24,18 @@ def process_uploaded_file_task(self, file_path, file_type, user_id=None, job_id=
 
         with storage_manager.storage.open(file_path, 'rb') as f:
             file_content = f.read()
-        
+
         original_file_name = file_path.split('/')[-1]
         file_extension = original_file_name.split('.')[-1].lower()
-        
+
         # Create an InMemoryUploadedFile for processing
         in_memory_file = InMemoryUploadedFile(
             BytesIO(file_content),
-            None,  # field_name
+            None,
             original_file_name,
-            file_type,  # content_type
+            file_type,
             len(file_content),
-            None  # charset
+            None
         )
 
         # --- Image Optimization (for profile pictures) ---
@@ -53,7 +51,6 @@ def process_uploaded_file_task(self, file_path, file_type, user_id=None, job_id=
                 quality=quality
             )
             if optimized_image:
-                # Overwrite original file with optimized version
                 storage_manager.save(file_path, optimized_image)
                 logger.info(f"Image optimized and saved: {file_path}")
             else:
@@ -67,7 +64,6 @@ def process_uploaded_file_task(self, file_path, file_type, user_id=None, job_id=
                 thumbnail_path = file_path.replace(f'.{file_extension}', '_thumbnail.jpg')
                 storage_manager.save(thumbnail_path, thumbnail)
                 logger.info(f"PDF thumbnail generated and saved: {thumbnail_path}")
-                # TODO: Update Application model with thumbnail path
             else:
                 logger.warning(f"PDF thumbnail generation failed for {file_path}")
 
@@ -78,7 +74,6 @@ def process_uploaded_file_task(self, file_path, file_type, user_id=None, job_id=
             if not is_safe:
                 logger.warning(f"File {file_path} is infected with a virus: {virus_name}. Deleting file.")
                 storage_manager.delete(file_path)
-                # TODO: Notify admin/user about infected file
                 return
             else:
                 logger.info(f"File {file_path} is clean.")
@@ -89,10 +84,8 @@ def process_uploaded_file_task(self, file_path, file_type, user_id=None, job_id=
             extracted_data = ResumeProcessor.parse_resume(in_memory_file, original_file_name)
             if extracted_data and extracted_data.get('extracted'):
                 logger.info(f"Resume parsed for {file_path}. Extracted data: {list(extracted_data.keys())}")
-                # TODO: Update Application model or create a ResumeData model with extracted info
             else:
                 logger.warning(f"Resume parsing failed for {file_path}")
 
     except Exception as e:
         logger.error(f"Unhandled error during file processing for {file_path}: {e}", exc_info=True)
-        raise self.retry(exc=e)

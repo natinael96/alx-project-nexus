@@ -147,16 +147,22 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
 class SavedJobSerializer(serializers.ModelSerializer):
     """
     Serializer for SavedJob model.
+    Uses job_id (UUID) for writes and returns full job details on reads.
     """
-    job = serializers.SerializerMethodField()
+    job_detail = serializers.SerializerMethodField(read_only=True)
+    job = serializers.PrimaryKeyRelatedField(
+        queryset=Job.objects.all(),
+        write_only=True,
+        help_text='Job ID (UUID) to save'
+    )
     
     class Meta:
         model = SavedJob
-        fields = ('id', 'job', 'notes', 'created_at')
+        fields = ('id', 'job', 'job_detail', 'notes', 'created_at')
         read_only_fields = ('id', 'created_at')
     
-    def get_job(self, obj):
-        """Return job details."""
+    def get_job_detail(self, obj):
+        """Return full job details on read."""
         from apps.jobs.serializers import JobListSerializer
         return JobListSerializer(obj.job).data
 

@@ -1,7 +1,6 @@
 """
-Celery tasks for core app.
+Background tasks for core app (synchronous).
 """
-from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
 from apps.core.notification_service import NotificationService
@@ -10,11 +9,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=3)
-def cleanup_old_notifications(self, days=90):
+def cleanup_old_notifications(days=90):
     """
     Clean up old notifications.
-    
+
     Args:
         days: Number of days to keep notifications (default: 90)
     """
@@ -24,22 +22,18 @@ def cleanup_old_notifications(self, days=90):
         return {'deleted': count}
     except Exception as e:
         logger.error(f"Error cleaning up notifications: {e}")
-        raise self.retry(exc=e, countdown=60)
 
 
-@shared_task(bind=True, max_retries=3)
-def generate_daily_reports(self):
+def generate_daily_reports():
     """
     Generate daily reports for admins.
     """
     try:
         from apps.jobs.models import Job, Application
         from apps.accounts.models import User
-        from django.db.models import Count
-        
-        # Get statistics
+
         stats = {
-            'date': timezone.now().date(),
+            'date': str(timezone.now().date()),
             'total_jobs': Job.objects.count(),
             'active_jobs': Job.objects.filter(status='active').count(),
             'total_applications': Application.objects.count(),
@@ -49,20 +43,17 @@ def generate_daily_reports(self):
                 date_joined__date=timezone.now().date()
             ).count(),
         }
-        
-        # TODO: Send report to admins via email or store in database
+
         logger.info(f"Generated daily report: {stats}")
         return stats
     except Exception as e:
         logger.error(f"Error generating daily reports: {e}")
-        raise self.retry(exc=e, countdown=60)
 
 
-@shared_task(bind=True, max_retries=3)
-def send_bulk_notifications(self, user_ids, notification_type, title, message, **kwargs):
+def send_bulk_notifications(user_ids, notification_type, title, message, **kwargs):
     """
     Send bulk notifications to multiple users.
-    
+
     Args:
         user_ids: List of user IDs
         notification_type: Type of notification
@@ -72,7 +63,7 @@ def send_bulk_notifications(self, user_ids, notification_type, title, message, *
     """
     try:
         from apps.accounts.models import User
-        
+
         sent_count = 0
         for user_id in user_ids:
             try:
@@ -89,9 +80,8 @@ def send_bulk_notifications(self, user_ids, notification_type, title, message, *
                 logger.warning(f"User {user_id} not found")
             except Exception as e:
                 logger.error(f"Error sending notification to user {user_id}: {e}")
-        
+
         logger.info(f"Sent {sent_count} bulk notifications")
         return {'sent': sent_count, 'total': len(user_ids)}
     except Exception as e:
-        logger.error(f"Error in send_bulk_notifications task: {e}")
-        raise self.retry(exc=e, countdown=60)
+        logger.error(f"Error in send_bulk_notifications: {e}")

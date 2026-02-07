@@ -67,7 +67,7 @@ htmlcov/
 .ipynb_checkpoints
 
 # pyenv
-.python-version
+# .python-version  # Needed by Heroku — do NOT gitignore
 
 # Celery
 celerybeat-schedule

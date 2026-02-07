@@ -1,14 +1,17 @@
 """
 Production settings for Job Board Platform.
+Optimized for Heroku deployment.
 """
 from .base import *
 from decouple import config
+import dj_database_url
+import os
 
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default=''
+    default='.herokuapp.com'
 ).split(',')
 
 # Security settings
@@ -27,86 +30,112 @@ SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)
 # Referrer Policy
 SECURE_REFERRER_POLICY = config('SECURE_REFERRER_POLICY', default='strict-origin-when-cross-origin')
 
-# Proxy SSL Header (if behind reverse proxy like nginx)
-# Uncomment and configure if using a reverse proxy
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Heroku terminates SSL at the load balancer, so we need this
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Email configuration (Production - use real SMTP service)
-# For production, configure with real SMTP (Gmail, SendGrid, Mailgun, AWS SES, etc.)
-# Or use Mailtrap for testing/staging environments
+# --- Database Configuration ---
+# Heroku sets DATABASE_URL automatically when you provision Heroku Postgres
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True,
+        )
+    }
+else:
+    # Fallback to manual config from base.py (non-Heroku environments)
+    DATABASES['default']['OPTIONS'].update({
+        'connect_timeout': 10,
+        'options': '-c statement_timeout=30000'
+    })
+    # Database connection pooling for production
+    if config('DB_CONN_MAX_AGE', default=None):
+        DATABASES['default']['CONN_MAX_AGE'] = config('DB_CONN_MAX_AGE', cast=int)
+
+# --- Email Configuration ---
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
     default='django.core.mail.backends.smtp.EmailBackend'
 )
-EMAIL_HOST = config('EMAIL_HOST', default='')  # Required - no default for production
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)  # Default to standard SMTP port
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')  # Required - no default
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')  # Required - no default
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.com')
 
-# CORS settings for production
+# --- CORS settings for production ---
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default=''
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        'CORS_ALLOWED_ORIGINS',
+        default=''
+    ).split(',')
+    if origin.strip()
+]
 
-# Database connection pooling for production
-# Note: CONN_MAX_AGE is already set in base.py based on cloud/local detection
-# Only update if explicitly set in environment
-if config('DB_CONN_MAX_AGE', default=None, cast=int):
-    DATABASES['default']['CONN_MAX_AGE'] = config('DB_CONN_MAX_AGE', cast=int)
+# --- Static Files (WhiteNoise for Heroku) ---
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Update OPTIONS if needed (preserve SSL settings from base.py)
-DATABASES['default']['OPTIONS'].update({
-    'connect_timeout': 10,
-    'options': '-c statement_timeout=30000'
-})
+# --- Cache Configuration ---
+# Heroku Redis addon sets REDIS_URL or REDIS_TLS_URL
+REDIS_URL = config('REDIS_URL', default=config('REDIS_TLS_URL', default=None))
 
-# Cache configuration for production (Redis)
-# Uses CACHE_BACKEND and CACHE_LOCATION from .env
-cache_backend = config(
-    'CACHE_BACKEND',
-    default='django_redis.cache.RedisCache'
-)
+if REDIS_URL:
+    # Handle Heroku Redis TLS URL scheme (rediss://)
+    # Heroku Redis uses self-signed certs, so we need to disable SSL cert verification
+    import ssl
+    redis_options = {}
+    if REDIS_URL.startswith('rediss://'):
+        redis_options = {
+            'ssl_cert_reqs': ssl.CERT_NONE,
+        }
 
-CACHES = {
-    'default': {
-        'BACKEND': cache_backend,
-        'LOCATION': config(
-            'CACHE_LOCATION',
-            default='redis://127.0.0.1:6379/1'
-        ),
-        'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
-        'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
-    }
-}
-
-# Add django-redis specific options only if using django-redis backend
-if 'django_redis' in cache_backend:
-    CACHES['default']['OPTIONS'] = {
-        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        'SOCKET_CONNECT_TIMEOUT': 5,
-        'SOCKET_TIMEOUT': 5,
-        'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-        'IGNORE_EXCEPTIONS': False,  # Raise exceptions in production
-        'CONNECTION_POOL_KWARGS': {
-            'max_connections': 50,
-            'retry_on_timeout': True,
-        },
+    cache_backend = 'django_redis.cache.RedisCache'
+    CACHES = {
+        'default': {
+            'BACKEND': cache_backend,
+            'LOCATION': REDIS_URL,
+            'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
+            'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'SOCKET_CONNECT_TIMEOUT': 5,
+                'SOCKET_TIMEOUT': 5,
+                'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+                'IGNORE_EXCEPTIONS': False,
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 20,
+                    'retry_on_timeout': True,
+                    **redis_options,
+                },
+            },
+        }
     }
 
-# Static files (use WhiteNoise or CDN in production)
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+else:
+    # Fallback: use local memory cache if no Redis available
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+            'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
+            'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
+        }
+    }
 
-# Sentry Error Tracking (Optional - configure if using Sentry)
+# --- Sentry Error Tracking ---
 try:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
-    
+    import logging
+
     SENTRY_DSN = config('SENTRY_DSN', default='')
     if SENTRY_DSN:
         sentry_sdk.init(
@@ -118,20 +147,18 @@ try:
                     signals_spans=True,
                 ),
                 LoggingIntegration(
-                    level=logging.INFO,  # Capture info and above as breadcrumbs
-                    event_level=logging.ERROR  # Send errors as events
+                    level=logging.INFO,
+                    event_level=logging.ERROR,
                 ),
             ],
             traces_sample_rate=config('SENTRY_TRACES_SAMPLE_RATE', default=0.1, cast=float),
-            send_default_pii=True,  # Send user information
+            send_default_pii=True,
             environment=config('ENVIRONMENT', default='production'),
             release=config('RELEASE_VERSION', default='1.0.0'),
         )
 except ImportError:
-    # Sentry SDK not installed
     pass
 except Exception as e:
-    # Sentry configuration failed, log but don't crash
     import logging
     logger = logging.getLogger(__name__)
     logger.warning(f"Sentry initialization failed: {str(e)}")

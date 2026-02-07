@@ -7,14 +7,6 @@ from django.dispatch import receiver
 from apps.core.email_service import EmailService
 from apps.core.cache_utils import invalidate_category_cache, invalidate_job_cache
 from apps.core.audit_service import AuditService
-
-# Import async email task (with fallback if Celery not available)
-try:
-    from apps.jobs.tasks import send_email_async
-    CELERY_AVAILABLE = True
-except ImportError:
-    CELERY_AVAILABLE = False
-    send_email_async = None
 from apps.core.file_management import cleanup_application_files
 from .models import Job, Application, Category
 from django.conf import settings
@@ -50,22 +42,17 @@ def job_post_save_handler(sender, instance, created, **kwargs):
                 pass
     except Exception as e:
         logger.error(f"Error logging audit for job: {e}")
-    
+
     # Invalidate cache
     try:
         invalidate_job_cache(instance.id if not created else None)
     except Exception as e:
         logger.error(f"Failed to invalidate job cache for Job ID {instance.id}: {e}")
-    
-    # Email notifications are handled in views, but this is a fallback
+
+    # Email notifications
     if created:
-        # Send job posted confirmation to employer (async if available)
         try:
-            if CELERY_AVAILABLE and send_email_async:
-                # Pass job ID instead of job object for Celery serialization
-                send_email_async.delay('job_posted_confirmation', job_id=instance.id)
-            else:
-                EmailService.send_job_posted_confirmation(instance)
+            EmailService.send_job_posted_confirmation(instance)
         except Exception as e:
             logger.error(f"Failed to send job posted confirmation for Job ID {instance.id}: {e}")
     else:
@@ -73,13 +60,8 @@ def job_post_save_handler(sender, instance, created, **kwargs):
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             if old_instance.status != instance.status:
-                # Send notification async if available
                 try:
-                    if CELERY_AVAILABLE and send_email_async:
-                        # Pass job ID instead of job object for Celery serialization
-                        send_email_async.delay('job_status_change', job_id=instance.id, old_status=old_instance.status)
-                    else:
-                        EmailService.send_job_status_change_notification(instance, old_instance.status)
+                    EmailService.send_job_status_change_notification(instance, old_instance.status)
                 except Exception as e:
                     logger.error(f"Failed to send job status change notification for Job ID {instance.id}: {e}")
         except sender.DoesNotExist:
@@ -102,7 +84,7 @@ def job_post_delete_handler(sender, instance, **kwargs):
         )
     except Exception as e:
         logger.error(f"Error logging audit for job deletion: {e}")
-    
+
     try:
         invalidate_job_cache(instance.id)
     except Exception as e:
@@ -137,32 +119,24 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                 pass
     except Exception as e:
         logger.error(f"Error logging audit for application: {e}")
-    
+
     if not instance.applicant or not instance.job or not instance.job.employer:
         logger.warning(f"Skipping application email for ID {instance.id} due to missing related data.")
         return
 
     if created:
-        # Send application confirmation to applicant (async if available)
+        # Send application confirmation to applicant
         try:
-            if CELERY_AVAILABLE and send_email_async:
-                # Pass application ID instead of application object for Celery serialization
-                send_email_async.delay('application_confirmation', application_id=instance.id)
-            else:
-                EmailService.send_application_confirmation(instance)
+            EmailService.send_application_confirmation(instance)
         except Exception as e:
             logger.error(f"Failed to send application confirmation for Application ID {instance.id}: {e}")
 
-        # Send new application notification to employer (async if available)
+        # Send new application notification to employer
         try:
-            if CELERY_AVAILABLE and send_email_async:
-                # Pass application ID instead of application object for Celery serialization
-                send_email_async.delay('new_application_notification', application_id=instance.id)
-            else:
-                EmailService.send_new_application_notification(instance)
+            EmailService.send_new_application_notification(instance)
         except Exception as e:
             logger.error(f"Failed to send new application notification for Application ID {instance.id}: {e}")
-        
+
         # Create in-app notification for employer
         try:
             from apps.core.notification_service import NotificationService
@@ -178,7 +152,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
             )
         except Exception as e:
             logger.error(f"Failed to create notification for Application ID {instance.id}: {e}")
-        
+
         # Create initial status history
         try:
             from apps.jobs.models_application_enhancements import ApplicationStatusHistory
@@ -186,7 +160,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                 application=instance,
                 old_status=None,
                 new_status=instance.status,
-                changed_by=None,  # System
+                changed_by=None,
                 reason='Application submitted'
             )
         except Exception as e:
@@ -196,16 +170,12 @@ def application_post_save_handler(sender, instance, created, **kwargs):
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             if old_instance.status != instance.status:
-                # Send email notification async if available
+                # Send email notification
                 try:
-                    if CELERY_AVAILABLE and send_email_async:
-                        # Pass application ID instead of application object for Celery serialization
-                        send_email_async.delay('application_status_update', application_id=instance.id, old_status=old_instance.status)
-                    else:
-                        EmailService.send_application_status_update(instance, old_instance.status)
+                    EmailService.send_application_status_update(instance, old_instance.status)
                 except Exception as e:
                     logger.error(f"Failed to send application status update for Application ID {instance.id}: {e}")
-                
+
                 # Create in-app notification for applicant
                 try:
                     from apps.core.notification_service import NotificationService
@@ -222,7 +192,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                     )
                 except Exception as e:
                     logger.error(f"Failed to create notification for Application ID {instance.id}: {e}")
-                
+
                 # Create status history
                 try:
                     from apps.jobs.models_application_enhancements import ApplicationStatusHistory
@@ -230,7 +200,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                         application=instance,
                         old_status=old_instance.status,
                         new_status=instance.status,
-                        changed_by=getattr(instance, '_status_changed_by', None),  # Set in view
+                        changed_by=getattr(instance, '_status_changed_by', None),
                         reason=getattr(instance, '_status_change_reason', '')
                     )
                 except Exception as e:
@@ -277,7 +247,7 @@ def application_pre_delete_handler(sender, instance, **kwargs):
         )
     except Exception as e:
         logger.error(f"Error logging audit for application deletion: {e}")
-    
+
     try:
         cleanup_application_files(instance)
     except Exception as e:

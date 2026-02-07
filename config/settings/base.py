@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -206,7 +207,9 @@ CACHE_TIMEOUT_VERY_LONG = 86400  # 24 hours
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = config('STATIC_URL', default='/static/')
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# Only include static dir if it exists (it may not exist on Heroku)
+_static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [_static_dir] if _static_dir.is_dir() else []
 
 # Media files
 MEDIA_URL = config('MEDIA_URL', default='/media/')
@@ -344,6 +347,9 @@ SWAGGER_SETTINGS = {
 }
 
 # Logging Configuration
+# Detect if running on Heroku (ephemeral filesystem - no file logging)
+IS_HEROKU = config('IS_HEROKU', default=False, cast=bool) or 'DYNO' in os.environ
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -380,6 +386,58 @@ LOGGING = {
             'formatter': 'verbose',
             'level': config('LOG_LEVEL', default='INFO'),
         },
+        'django.server': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'django.server',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': config('LOG_LEVEL', default='INFO'),
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': config('LOG_LEVEL', default='INFO'),
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['django.server'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': config('DB_LOG_LEVEL', default='WARNING'),
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps.api': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.performance': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Add file handlers only when NOT on Heroku (Heroku has ephemeral filesystem)
+if not IS_HEROKU:
+    os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+    LOGGING['handlers'].update({
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
@@ -391,7 +449,7 @@ LOGGING = {
         'error_file': {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'errors.log',
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'maxBytes': 1024 * 1024 * 10,
             'backupCount': 5,
             'formatter': 'verbose',
             'level': 'ERROR',
@@ -399,7 +457,7 @@ LOGGING = {
         'api_file': {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'api.log',
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'maxBytes': 1024 * 1024 * 10,
             'backupCount': 5,
             'formatter': 'json',
             'level': 'INFO',
@@ -407,103 +465,22 @@ LOGGING = {
         'performance_file': {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'performance.log',
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'maxBytes': 1024 * 1024 * 10,
             'backupCount': 5,
             'formatter': 'json',
             'level': 'INFO',
         },
-        'django.server': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'django.server',
-        },
-    },
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': config('LOG_LEVEL', default='INFO'),
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file', 'error_file'],
-            'level': config('LOG_LEVEL', default='INFO'),
-            'propagate': False,
-        },
-        'django.server': {
-            'handlers': ['django.server'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.db.backends': {
-            'handlers': ['console', 'file'],
-            'level': config('DB_LOG_LEVEL', default='WARNING'),  # Set to DEBUG to log all queries
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['file', 'error_file'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'apps': {
-            'handlers': ['console', 'file', 'error_file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'apps.api': {
-            'handlers': ['api_file', 'console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'apps.performance': {
-            'handlers': ['performance_file', 'console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
-
-# Create logs directory if it doesn't exist
-os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+    })
+    LOGGING['root']['handlers'] = ['console', 'file']
+    LOGGING['loggers']['django']['handlers'] = ['console', 'file', 'error_file']
+    LOGGING['loggers']['django.db.backends']['handlers'] = ['console', 'file']
+    LOGGING['loggers']['django.request']['handlers'] = ['file', 'error_file']
+    LOGGING['loggers']['apps']['handlers'] = ['console', 'file', 'error_file']
+    LOGGING['loggers']['apps.api']['handlers'] = ['api_file', 'console']
+    LOGGING['loggers']['apps.performance']['handlers'] = ['performance_file', 'console']
 
 # Email Configuration (Base settings - override in environment-specific files)
 SITE_NAME = config('SITE_NAME', default='Job Board Platform')
 SITE_URL = config('SITE_URL', default='http://localhost:8000')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.com')
 
-# Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://127.0.0.1:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_ENABLE_UTC = True
-
-# Celery Task Settings
-CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_REJECT_ON_WORKER_DEAD = True
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
-
-# Celery Beat (Scheduled Tasks)
-CELERY_BEAT_SCHEDULE = {
-    'process-job-expiration': {
-        'task': 'apps.jobs.tasks.process_job_expiration',
-        'schedule': 3600.0,  # Run every hour
-    },
-    'process-scheduled-jobs': {
-        'task': 'apps.jobs.tasks.process_scheduled_jobs',
-        'schedule': 300.0,  # Run every 5 minutes
-    },
-    'send-application-deadline-reminders': {
-        'task': 'apps.jobs.tasks.send_application_deadline_reminders',
-        'schedule': 86400.0,  # Run daily
-    },
-    'cleanup-old-notifications': {
-        'task': 'apps.core.tasks.cleanup_old_notifications',
-        'schedule': 86400.0,  # Run daily
-    },
-    'generate-daily-reports': {
-        'task': 'apps.core.tasks.generate_daily_reports',
-        'schedule': 86400.0,  # Run daily at midnight
-    },
-}

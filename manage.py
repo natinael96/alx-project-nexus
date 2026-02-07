@@ -10,11 +10,8 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    # Allow override via environment variable, default to development
-    os.environ.setdefault(
-        'DJANGO_SETTINGS_MODULE',
-        os.getenv('DJANGO_SETTINGS_MODULE', 'config.settings.development')
-    )
+    # Settings module auto-detects environment via config.settings.__init__.py
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
