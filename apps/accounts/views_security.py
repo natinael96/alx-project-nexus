@@ -213,7 +213,7 @@ class APIKeyViewSet(viewsets.ModelViewSet):
         api_key = self.get_object()
         
         # Check permission
-        if not request.user.is_admin and api_key.user != request.user:
+        if not (hasattr(request.user, 'is_admin') and request.user.is_admin) and api_key.user != request.user:
             return Response(
                 {'error': 'Permission denied'},
                 status=status.HTTP_403_FORBIDDEN

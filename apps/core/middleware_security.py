@@ -39,7 +39,7 @@ class IPWhitelistMiddleware(MiddlewareMixin):
         
         # Check if user is admin
         if hasattr(request, 'user') and request.user.is_authenticated:
-            if request.user.is_admin:
+            if hasattr(request.user, 'is_admin') and request.user.is_admin:
                 # Check IP whitelist
                 if not SecurityService.is_ip_whitelisted(ip_address):
                     logger.warning(f"Admin access denied for IP: {ip_address}")
@@ -52,18 +52,23 @@ class IPWhitelistMiddleware(MiddlewareMixin):
                     )
                     
                     # Return appropriate response
-                    if hasattr(request, 'accepted_renderer'):
-                        # DRF request
-                        return Response(
-                            {'error': 'Access denied. Your IP address is not whitelisted.'},
-                            status=status.HTTP_403_FORBIDDEN
-                        )
-                    else:
-                        # Django request
-                        return JsonResponse(
-                            {'error': 'Access denied. Your IP address is not whitelisted.'},
-                            status=403
-                        )
+                    try:
+                        from rest_framework.response import Response
+                        from rest_framework import status
+                        if hasattr(request, 'accepted_renderer'):
+                            # DRF request
+                            return Response(
+                                {'error': 'Access denied. Your IP address is not whitelisted.'},
+                                status=status.HTTP_403_FORBIDDEN
+                            )
+                    except ImportError:
+                        pass
+                    
+                    # Django request
+                    return JsonResponse(
+                        {'error': 'Access denied. Your IP address is not whitelisted.'},
+                        status=403
+                    )
         
         return None
     

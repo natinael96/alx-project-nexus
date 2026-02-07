@@ -10,9 +10,18 @@ class AuditLogSerializer(serializers.ModelSerializer):
     """
     Serializer for AuditLog model.
     """
-    user_name = serializers.CharField(source='user.username', read_only=True, allow_null=True)
-    action_display = serializers.CharField(source='get_action_display', read_only=True)
-    content_type_name = serializers.CharField(source='content_type.model', read_only=True, allow_null=True)
+    user_name = serializers.SerializerMethodField()
+    action_display = serializers.SerializerMethodField()
+    content_type_name = serializers.SerializerMethodField()
+    
+    def get_user_name(self, obj):
+        return obj.user.username if obj.user else None
+    
+    def get_action_display(self, obj):
+        return obj.get_action_display()
+    
+    def get_content_type_name(self, obj):
+        return obj.content_type.model if obj.content_type else None
     
     class Meta:
         model = AuditLog
@@ -29,8 +38,14 @@ class ChangeHistorySerializer(serializers.ModelSerializer):
     """
     Serializer for ChangeHistory model.
     """
-    changed_by_name = serializers.CharField(source='changed_by.username', read_only=True, allow_null=True)
-    content_type_name = serializers.CharField(source='content_type.model', read_only=True)
+    changed_by_name = serializers.SerializerMethodField()
+    content_type_name = serializers.SerializerMethodField()
+    
+    def get_changed_by_name(self, obj):
+        return obj.changed_by.username if obj.changed_by else None
+    
+    def get_content_type_name(self, obj):
+        return obj.content_type.model if obj.content_type else None
     
     class Meta:
         model = ChangeHistory

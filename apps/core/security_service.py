@@ -5,6 +5,7 @@ import hashlib
 import secrets
 import logging
 from typing import Optional
+from datetime import datetime
 from django.utils import timezone
 from apps.core.models_security import APIKey, IPWhitelist, SecurityEvent
 from apps.accounts.models import User
@@ -26,11 +27,11 @@ class SecurityService:
     def create_api_key(
         user: User,
         name: str,
-        expires_at: Optional[timezone.datetime] = None,
+        expires_at: Optional[datetime] = None,
         rate_limit: int = 1000,
         allowed_ips: Optional[str] = None,
         scopes: Optional[list] = None
-    ) -> tuple[str, APIKey]:
+    ) -> tuple:
         """
         Create a new API key.
         

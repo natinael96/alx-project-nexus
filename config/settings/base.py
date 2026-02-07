@@ -188,6 +188,7 @@ AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default='')  # For CDN
 
 # File Processing Configuration
 ENABLE_VIRUS_SCANNING = config('ENABLE_VIRUS_SCANNING', default=False, cast=bool)
+ENABLE_RESUME_PARSING = config('ENABLE_RESUME_PARSING', default=False, cast=bool)
 ENABLE_IMAGE_OPTIMIZATION = config('ENABLE_IMAGE_OPTIMIZATION', default=True, cast=bool)
 ENABLE_RESUME_PARSING = config('ENABLE_RESUME_PARSING', default=True, cast=bool)
 MAX_IMAGE_WIDTH = config('MAX_IMAGE_WIDTH', default=800, cast=int)

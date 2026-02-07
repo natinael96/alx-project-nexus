@@ -127,7 +127,7 @@ def export_applications(request):
     queryset = Application.objects.select_related('job', 'applicant', 'job__employer')
     
     # Filter by employer if not admin
-    if not request.user.is_admin:
+    if not (request.user.is_authenticated and request.user.is_admin):
         queryset = queryset.filter(job__employer=request.user)
     
     # Filter by status
