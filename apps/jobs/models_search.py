@@ -5,9 +5,10 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from apps.accounts.models import User
+from apps.core.models_base import UUIDModel
 
 
-class SearchHistory(models.Model):
+class SearchHistory(UUIDModel):
     """
     Model to track user search history.
     """
@@ -56,7 +57,7 @@ class SearchHistory(models.Model):
         return f"{user_str}: {self.search_query}"
 
 
-class SavedSearch(models.Model):
+class SavedSearch(UUIDModel):
     """
     Model for saved searches that users can revisit.
     """
@@ -106,7 +107,7 @@ class SavedSearch(models.Model):
         return f"{self.user.username}: {self.name}"
 
 
-class SearchAlert(models.Model):
+class SearchAlert(UUIDModel):
     """
     Model for search alerts that notify users of new matching jobs.
     """
@@ -181,7 +182,7 @@ class SearchAlert(models.Model):
         return f"{self.user.username}: {self.name} ({self.frequency})"
 
 
-class PopularSearchTerm(models.Model):
+class PopularSearchTerm(UUIDModel):
     """
     Model to track popular search terms for analytics and suggestions.
     """
