@@ -14,6 +14,32 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def get_cache_ttl(cache_key: str, fallback: int) -> int:
+    """
+    Get the TTL (time to live) for a cache key.
+    Works with both django-redis and Django's built-in cache backends.
+    
+    Args:
+        cache_key: The cache key to check
+        fallback: Fallback TTL value if TTL cannot be determined
+        
+    Returns:
+        TTL in seconds, or fallback value if TTL method is not available
+    """
+    # Check if cache backend supports ttl() method (django-redis)
+    if hasattr(cache, 'ttl'):
+        try:
+            ttl = cache.ttl(cache_key)
+            if ttl is not None and ttl > 0:
+                return ttl
+        except (AttributeError, TypeError):
+            # ttl() method exists but may not work with this backend
+            pass
+    
+    # Fallback: return the provided fallback value
+    return fallback
+
+
 class RateLimitExceeded(Exception):
     """Exception raised when rate limit is exceeded."""
     pass
@@ -69,9 +95,7 @@ def check_rate_limit(
     # Check if limit exceeded
     if current_count >= limit:
         # Get TTL to calculate reset time
-        ttl = cache.ttl(cache_key)
-        if ttl is None:
-            ttl = period
+        ttl = get_cache_ttl(cache_key, period)
         
         return False, {
             'limit': limit,
@@ -88,9 +112,7 @@ def check_rate_limit(
     remaining = max(0, limit - current_count - (1 if increment else 0))
     
     # Get TTL for reset time
-    ttl = cache.ttl(cache_key)
-    if ttl is None:
-        ttl = period
+    ttl = get_cache_ttl(cache_key, period)
     
     return True, {
         'limit': limit,

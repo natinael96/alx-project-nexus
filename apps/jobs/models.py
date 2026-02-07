@@ -3,7 +3,6 @@ Models for jobs app - Job, Category, and Application.
 """
 from django.db import models
 from django.db.models import F
-from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MinValueValidator
 from django.urls import reverse
 from django.utils.text import slugify
@@ -332,8 +331,9 @@ class Job(models.Model):
             models.Index(fields=['job_type', 'status']),
             models.Index(fields=['salary_min', 'salary_max']),
             models.Index(fields=['is_featured', 'status']),
-            # Full-text search index (PostgreSQL)
-            GinIndex(fields=['title', 'description'], name='job_search_idx'),
+            # Note: Full-text search is handled via SearchVector in search_service.py
+            # GinIndex on CharField/TextField requires operator classes (gin_trgm_ops)
+            # which needs pg_trgm extension. For now, we use SearchVector for full-text search.
         ]
     
     def __str__(self):

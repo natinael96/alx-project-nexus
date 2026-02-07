@@ -57,8 +57,8 @@ CACHES = {
     }
 }
 
-# Add Redis-specific options if using Redis cache
-if 'redis' in cache_backend.lower():
+# Add django-redis specific options only if using django-redis backend
+if 'django_redis' in cache_backend:
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         'SOCKET_CONNECT_TIMEOUT': 5,

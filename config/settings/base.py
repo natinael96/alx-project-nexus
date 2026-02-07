@@ -148,27 +148,33 @@ USE_I18N = True
 USE_TZ = True
 
 # Cache Configuration
+# Get the cache backend from environment, default to django-redis
+cache_backend = config(
+    'CACHE_BACKEND',
+    default='django_redis.cache.RedisCache'
+)
+
 CACHES = {
     'default': {
-        'BACKEND': config(
-            'CACHE_BACKEND',
-            default='django.core.cache.backends.redis.RedisCache'
-        ),
+        'BACKEND': cache_backend,
         'LOCATION': config(
             'CACHE_LOCATION',
             default='redis://127.0.0.1:6379/1'
         ),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'SOCKET_CONNECT_TIMEOUT': 5,
-            'SOCKET_TIMEOUT': 5,
-            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-            'IGNORE_EXCEPTIONS': True,  # Fail silently if Redis is unavailable
-        },
         'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
         'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),  # 5 minutes default
     }
 }
+
+# Add django-redis specific options only if using django-redis backend
+if 'django_redis' in cache_backend:
+    CACHES['default']['OPTIONS'] = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'SOCKET_CONNECT_TIMEOUT': 5,
+        'SOCKET_TIMEOUT': 5,
+        'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+        'IGNORE_EXCEPTIONS': True,  # Fail silently if Redis is unavailable
+    }
 
 # Cache key naming strategy
 CACHE_KEY_PREFIX = config('CACHE_KEY_PREFIX', default='jobboard')

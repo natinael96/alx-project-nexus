@@ -65,31 +65,36 @@ DATABASES['default'].update({
 
 # Cache configuration for production (Redis)
 # Uses CACHE_BACKEND and CACHE_LOCATION from .env
+cache_backend = config(
+    'CACHE_BACKEND',
+    default='django_redis.cache.RedisCache'
+)
+
 CACHES = {
     'default': {
-        'BACKEND': config(
-            'CACHE_BACKEND',
-            default='django_redis.cache.RedisCache'
-        ),
+        'BACKEND': cache_backend,
         'LOCATION': config(
             'CACHE_LOCATION',
             default='redis://127.0.0.1:6379/1'
         ),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'SOCKET_CONNECT_TIMEOUT': 5,
-            'SOCKET_TIMEOUT': 5,
-            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-            'IGNORE_EXCEPTIONS': False,  # Raise exceptions in production
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 50,
-                'retry_on_timeout': True,
-            },
-        },
         'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
         'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
     }
 }
+
+# Add django-redis specific options only if using django-redis backend
+if 'django_redis' in cache_backend:
+    CACHES['default']['OPTIONS'] = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'SOCKET_CONNECT_TIMEOUT': 5,
+        'SOCKET_TIMEOUT': 5,
+        'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+        'IGNORE_EXCEPTIONS': False,  # Raise exceptions in production
+        'CONNECTION_POOL_KWARGS': {
+            'max_connections': 50,
+            'retry_on_timeout': True,
+        },
+    }
 
 # Static files (use WhiteNoise or CDN in production)
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
