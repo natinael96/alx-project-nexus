@@ -82,17 +82,39 @@ def application_post_save_handler(sender, instance, created, **kwargs):
         return
 
     if created:
-        # Send application confirmation to applicant
+        # Send application confirmation to applicant (async if available)
         try:
-            EmailService.send_application_confirmation(instance)
+            if CELERY_AVAILABLE and send_email_async:
+                send_email_async.delay('application_confirmation', application=instance)
+            else:
+                EmailService.send_application_confirmation(instance)
         except Exception as e:
             logger.error(f"Failed to send application confirmation for Application ID {instance.id}: {e}")
 
-        # Send new application notification to employer
+        # Send new application notification to employer (async if available)
         try:
-            EmailService.send_new_application_notification(instance)
+            if CELERY_AVAILABLE and send_email_async:
+                send_email_async.delay('new_application_notification', application=instance)
+            else:
+                EmailService.send_new_application_notification(instance)
         except Exception as e:
             logger.error(f"Failed to send new application notification for Application ID {instance.id}: {e}")
+        
+        # Create in-app notification for employer
+        try:
+            from apps.core.notification_service import NotificationService
+            NotificationService.create_notification(
+                user=instance.job.employer,
+                notification_type='job_application',
+                title='New Application',
+                message=f'New application received for "{instance.job.title}"',
+                priority='high',
+                action_url=f'/api/applications/{instance.id}/',
+                related_object_type='application',
+                related_object_id=instance.id
+            )
+        except Exception as e:
+            logger.error(f"Failed to create notification for Application ID {instance.id}: {e}")
         
         # Create initial status history
         try:
@@ -111,11 +133,31 @@ def application_post_save_handler(sender, instance, created, **kwargs):
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             if old_instance.status != instance.status:
-                # Send email notification
+                # Send email notification async if available
                 try:
-                    EmailService.send_application_status_update(instance, old_instance.status)
+                    if CELERY_AVAILABLE and send_email_async:
+                        send_email_async.delay('application_status_update', application=instance, old_status=old_instance.status)
+                    else:
+                        EmailService.send_application_status_update(instance, old_instance.status)
                 except Exception as e:
                     logger.error(f"Failed to send application status update for Application ID {instance.id}: {e}")
+                
+                # Create in-app notification for applicant
+                try:
+                    from apps.core.notification_service import NotificationService
+                    status_display = dict(Application.STATUS_CHOICES).get(instance.status, instance.status)
+                    NotificationService.create_notification(
+                        user=instance.applicant,
+                        notification_type='application_status',
+                        title='Application Status Updated',
+                        message=f'Your application for "{instance.job.title}" status changed to {status_display}',
+                        priority='normal',
+                        action_url=f'/api/applications/{instance.id}/',
+                        related_object_type='application',
+                        related_object_id=instance.id
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to create notification for Application ID {instance.id}: {e}")
                 
                 # Create status history
                 try:
