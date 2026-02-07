@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'job_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'job_id': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
             'method': openapi.Schema(type=openapi.TYPE_STRING, enum=['email', 'link', 'social', 'other']),
             'shared_with': openapi.Schema(type=openapi.TYPE_STRING),
         },
