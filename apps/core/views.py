@@ -9,6 +9,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .health import health_check, liveness_check, readiness_check
 from .analytics import AnalyticsService
+from apps.accounts.models import User
 
 
 @swagger_auto_schema(
@@ -132,8 +133,9 @@ def application_statistics_view(request):
         openapi.Parameter(
             'user_id',
             openapi.IN_QUERY,
-            description='User ID to get activity for',
-            type=openapi.TYPE_INTEGER,
+            description='User ID (UUID) to get activity for',
+            type=openapi.TYPE_STRING,
+            format=openapi.FORMAT_UUID,
             required=True
         ),
         openapi.Parameter(
@@ -164,10 +166,16 @@ def user_activity_view(request):
         )
     
     try:
-        activity = AnalyticsService.get_user_activity(int(user_id), days)
+        # user_id is now a UUID string, not an integer
+        activity = AnalyticsService.get_user_activity(user_id, days)
         return Response(activity, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response(
             {'error': 'User not found'},
             status=status.HTTP_404_NOT_FOUND
+        )
+    except ValueError as e:
+        return Response(
+            {'error': f'Invalid user ID: {str(e)}'},
+            status=status.HTTP_400_BAD_REQUEST
         )
