@@ -199,7 +199,8 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                 # Send email notification async if available
                 try:
                     if CELERY_AVAILABLE and send_email_async:
-                        send_email_async.delay('application_status_update', application=instance, old_status=old_instance.status)
+                        # Pass application ID instead of application object for Celery serialization
+                        send_email_async.delay('application_status_update', application_id=instance.id, old_status=old_instance.status)
                     else:
                         EmailService.send_application_status_update(instance, old_instance.status)
                 except Exception as e:

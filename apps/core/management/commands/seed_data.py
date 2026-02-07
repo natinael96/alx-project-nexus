@@ -265,19 +265,28 @@ class Command(BaseCommand):
                     raise ValueError(f"Could not generate unique username for employer {company}")
 
             try:
-                employer = User.objects.create(
+                # Use get_or_create to handle existing users
+                employer, created = User.objects.get_or_create(
                     username=username,
-                    email=email,
-                    first_name=company,
-                    last_name='Recruiter',
-                    role='employer',
-                    is_active=True,
+                    defaults={
+                        'email': email,
+                        'first_name': company,
+                        'last_name': 'Recruiter',
+                        'role': 'employer',
+                        'is_active': True,
+                    }
                 )
-                employer.set_password('employer123')
-                employer.save()
+                if created:
+                    employer.set_password('employer123')
+                    employer.save()
+                else:
+                    # Update password if user already exists
+                    employer.set_password('employer123')
+                    employer.save()
                 employers.append(employer)
                 if verbosity >= 2:
-                    self.stdout.write(f'    Created employer: {employer.username} (ID: {employer.id}, Email: {employer.email})')
+                    status = "Created" if created else "Found existing"
+                    self.stdout.write(f'    {status} employer: {employer.username} (ID: {employer.id}, Email: {employer.email})')
             except Exception as e:
                 if verbosity >= 1:
                     self.stdout.write(self.style.ERROR(f'    Failed to create employer {username}: {str(e)}'))
@@ -308,19 +317,28 @@ class Command(BaseCommand):
                     raise ValueError(f"Could not generate unique username for user {first_name} {last_name}")
 
             try:
-                user = User.objects.create(
+                # Use get_or_create to handle existing users
+                user, created = User.objects.get_or_create(
                     username=username,
-                    email=email,
-                    first_name=first_name,
-                    last_name=last_name,
-                    role='user',
-                    is_active=True,
+                    defaults={
+                        'email': email,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'role': 'user',
+                        'is_active': True,
+                    }
                 )
-                user.set_password('user123')
-                user.save()
+                if created:
+                    user.set_password('user123')
+                    user.save()
+                else:
+                    # Update password if user already exists
+                    user.set_password('user123')
+                    user.save()
                 users.append(user)
                 if verbosity >= 2:
-                    self.stdout.write(f'    Created user: {user.username} (ID: {user.id}, Email: {user.email})')
+                    status = "Created" if created else "Found existing"
+                    self.stdout.write(f'    {status} user: {user.username} (ID: {user.id}, Email: {user.email})')
             except Exception as e:
                 if verbosity >= 1:
                     self.stdout.write(self.style.ERROR(f'    Failed to create user {username}: {str(e)}'))

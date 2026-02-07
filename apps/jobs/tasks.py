@@ -174,25 +174,43 @@ def send_email_async(self, email_type, **kwargs):
             # Handle both application object and application_id for backward compatibility
             if 'application_id' in kwargs:
                 from apps.jobs.models import Application
-                application = Application.objects.get(id=kwargs['application_id'])
-            else:
+                try:
+                    application = Application.objects.get(id=kwargs['application_id'])
+                except Application.DoesNotExist:
+                    logger.warning(f"Application with ID {kwargs['application_id']} not found. Skipping email notification.")
+                    return  # Silently skip if application doesn't exist (might have been deleted)
+            elif 'application' in kwargs:
                 application = kwargs['application']
+            else:
+                raise ValueError("Either 'application_id' or 'application' must be provided for application_confirmation")
             EmailService.send_application_confirmation(application)
         elif email_type == 'new_application_notification':
             # Handle both application object and application_id for backward compatibility
             if 'application_id' in kwargs:
                 from apps.jobs.models import Application
-                application = Application.objects.get(id=kwargs['application_id'])
-            else:
+                try:
+                    application = Application.objects.get(id=kwargs['application_id'])
+                except Application.DoesNotExist:
+                    logger.warning(f"Application with ID {kwargs['application_id']} not found. Skipping email notification.")
+                    return  # Silently skip if application doesn't exist (might have been deleted)
+            elif 'application' in kwargs:
                 application = kwargs['application']
+            else:
+                raise ValueError("Either 'application_id' or 'application' must be provided for new_application_notification")
             EmailService.send_new_application_notification(application)
         elif email_type == 'application_status_update':
             # Handle both application object and application_id for backward compatibility
             if 'application_id' in kwargs:
                 from apps.jobs.models import Application
-                application = Application.objects.get(id=kwargs['application_id'])
-            else:
+                try:
+                    application = Application.objects.get(id=kwargs['application_id'])
+                except Application.DoesNotExist:
+                    logger.warning(f"Application with ID {kwargs['application_id']} not found. Skipping email notification.")
+                    return  # Silently skip if application doesn't exist (might have been deleted)
+            elif 'application' in kwargs:
                 application = kwargs['application']
+            else:
+                raise ValueError("Either 'application_id' or 'application' must be provided for application_status_update")
             EmailService.send_application_status_update(
                 application,
                 kwargs.get('old_status')
@@ -201,17 +219,29 @@ def send_email_async(self, email_type, **kwargs):
             # Handle both job object and job_id for backward compatibility
             if 'job_id' in kwargs:
                 from apps.jobs.models import Job
-                job = Job.objects.get(id=kwargs['job_id'])
-            else:
+                try:
+                    job = Job.objects.get(id=kwargs['job_id'])
+                except Job.DoesNotExist:
+                    logger.warning(f"Job with ID {kwargs['job_id']} not found. Skipping email notification.")
+                    return  # Silently skip if job doesn't exist (might have been deleted)
+            elif 'job' in kwargs:
                 job = kwargs['job']
+            else:
+                raise ValueError("Either 'job_id' or 'job' must be provided for job_posted_confirmation")
             EmailService.send_job_posted_confirmation(job)
         elif email_type == 'job_status_change':
             # Handle both job object and job_id for backward compatibility
             if 'job_id' in kwargs:
                 from apps.jobs.models import Job
-                job = Job.objects.get(id=kwargs['job_id'])
-            else:
+                try:
+                    job = Job.objects.get(id=kwargs['job_id'])
+                except Job.DoesNotExist:
+                    logger.warning(f"Job with ID {kwargs['job_id']} not found. Skipping email notification.")
+                    return  # Silently skip if job doesn't exist (might have been deleted)
+            elif 'job' in kwargs:
                 job = kwargs['job']
+            else:
+                raise ValueError("Either 'job_id' or 'job' must be provided for job_status_change")
             EmailService.send_job_status_change_notification(
                 job,
                 kwargs.get('old_status')

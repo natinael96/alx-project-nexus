@@ -524,9 +524,13 @@ class Application(UUIDModel):
         """Override save to run clean validation and update reviewed_at."""
         # Update reviewed_at when status changes from pending
         if self.pk:
-            old_instance = Application.objects.get(pk=self.pk)
-            if old_instance.status == 'pending' and self.status != 'pending' and not self.reviewed_at:
-                self.reviewed_at = timezone.now()
+            try:
+                old_instance = Application.objects.get(pk=self.pk)
+                if old_instance.status == 'pending' and self.status != 'pending' and not self.reviewed_at:
+                    self.reviewed_at = timezone.now()
+            except Application.DoesNotExist:
+                # New object being created - no old instance to compare
+                pass
         
         self.full_clean()
         super().save(*args, **kwargs)
