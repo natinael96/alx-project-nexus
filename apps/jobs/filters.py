@@ -2,7 +2,6 @@
 Filters for jobs app.
 """
 import django_filters
-from django.db import models
 from .models import Job, Category, Application
 
 
@@ -20,7 +19,9 @@ class JobFilter(django_filters.FilterSet):
     min_salary = django_filters.NumberFilter(field_name='salary_min', lookup_expr='gte')
     max_salary = django_filters.NumberFilter(field_name='salary_max', lookup_expr='lte')
     is_featured = django_filters.BooleanFilter()
-    search = django_filters.CharFilter(method='filter_search')
+    # Note: 'search' is intentionally NOT defined here to avoid duplicating
+    # the 'search' query parameter that DRF's SearchFilter already generates.
+    # SearchFilter handles search via JobViewSet.search_fields.
     
     class Meta:
         model = Job
@@ -41,29 +42,6 @@ class JobFilter(django_filters.FilterSet):
         
         # Apply other filters
         return super().filter_queryset(queryset)
-    
-    def filter_search(self, queryset, name, value):
-        """
-        Full-text search on title, description, and requirements.
-        
-        Security: Uses parameterized queries (Django ORM) to prevent SQL injection.
-        Performance: Uses case-insensitive contains for flexible matching.
-        """
-        if value:
-            # Strip and validate search term
-            search_term = value.strip()
-            if len(search_term) < 2:
-                # Too short search terms can be inefficient, but allow them
-                pass
-            
-            # Use Q objects for OR logic (safe from SQL injection)
-            return queryset.filter(
-                models.Q(title__icontains=search_term) |
-                models.Q(description__icontains=search_term) |
-                models.Q(requirements__icontains=search_term) |
-                models.Q(location__icontains=search_term)  # Also search location
-            )
-        return queryset
 
 
 class ApplicationFilter(django_filters.FilterSet):
