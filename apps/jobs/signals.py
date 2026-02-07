@@ -5,8 +5,15 @@ import logging
 from django.db.models.signals import post_save, post_delete, pre_delete
 from django.dispatch import receiver
 from apps.core.email_service import EmailService
-from apps.jobs.tasks import send_email_async
 from apps.core.cache_utils import invalidate_category_cache, invalidate_job_cache
+
+# Import async email task (with fallback if Celery not available)
+try:
+    from apps.jobs.tasks import send_email_async
+    CELERY_AVAILABLE = True
+except ImportError:
+    CELERY_AVAILABLE = False
+    send_email_async = None
 from apps.core.file_management import cleanup_application_files
 from .models import Job, Application, Category
 from django.conf import settings
@@ -27,9 +34,12 @@ def job_post_save_handler(sender, instance, created, **kwargs):
     
     # Email notifications are handled in views, but this is a fallback
     if created:
-        # Send job posted confirmation to employer
+        # Send job posted confirmation to employer (async if available)
         try:
-            EmailService.send_job_posted_confirmation(instance)
+            if CELERY_AVAILABLE and send_email_async:
+                send_email_async.delay('job_posted_confirmation', job=instance)
+            else:
+                EmailService.send_job_posted_confirmation(instance)
         except Exception as e:
             logger.error(f"Failed to send job posted confirmation for Job ID {instance.id}: {e}")
     else:
@@ -37,7 +47,14 @@ def job_post_save_handler(sender, instance, created, **kwargs):
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             if old_instance.status != instance.status:
-                EmailService.send_job_status_change_notification(instance, old_instance.status)
+                # Send notification async if available
+                try:
+                    if CELERY_AVAILABLE and send_email_async:
+                        send_email_async.delay('job_status_change', job=instance, old_status=old_instance.status)
+                    else:
+                        EmailService.send_job_status_change_notification(instance, old_instance.status)
+                except Exception as e:
+                    logger.error(f"Failed to send job status change notification for Job ID {instance.id}: {e}")
         except sender.DoesNotExist:
             logger.warning(f"Job instance with ID {instance.id} not found for status change check.")
         except Exception as e:
