@@ -202,7 +202,7 @@ class SavedJobViewSet(viewsets.ModelViewSet):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'job_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'job_id': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
                 'notes': openapi.Schema(type=openapi.TYPE_STRING),
             },
             required=['job_id']

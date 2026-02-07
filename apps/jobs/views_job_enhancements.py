@@ -93,8 +93,9 @@ def share_job(request):
         openapi.Parameter(
             'job_id',
             openapi.IN_QUERY,
-            description='Job ID to find similar jobs for',
-            type=openapi.TYPE_INTEGER,
+            description='Job ID (UUID) to find similar jobs for',
+            type=openapi.TYPE_STRING,
+            format=openapi.FORMAT_UUID,
             required=True
         ),
         openapi.Parameter(

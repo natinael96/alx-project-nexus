@@ -209,8 +209,9 @@ class JobViewSet(viewsets.ModelViewSet):
             openapi.Parameter(
                 'category',
                 openapi.IN_QUERY,
-                description='Filter by category ID',
-                type=openapi.TYPE_INTEGER
+                description='Filter by category ID (UUID)',
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_UUID
             ),
             openapi.Parameter(
                 'location',
@@ -521,8 +522,9 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             openapi.Parameter(
                 'job',
                 openapi.IN_QUERY,
-                description='Filter by job ID',
-                type=openapi.TYPE_INTEGER
+                description='Filter by job ID (UUID)',
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_UUID
             ),
             openapi.Parameter(
                 'ordering',
