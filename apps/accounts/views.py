@@ -113,7 +113,9 @@ def login_user(request):
     """
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        # Call save() to trigger create() method which returns serialized data
+        result = serializer.save()
+        return Response(result, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

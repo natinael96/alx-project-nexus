@@ -123,7 +123,23 @@ def cache_result(
             
             # Execute function and cache result
             result = func(*args, **kwargs)
-            cache.set(cache_key, result, timeout)
+            
+            # Only cache JSON-serializable data (dicts, lists, strings, numbers, bools, None)
+            # Model instances should be serialized before caching
+            if result is not None:
+                try:
+                    # Try to serialize to ensure it's JSON-compatible
+                    json.dumps(result)
+                    cache.set(cache_key, result, timeout)
+                except (TypeError, ValueError) as e:
+                    # Log warning but don't fail - just skip caching
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Result from {func.__name__} is not JSON serializable, skipping cache. "
+                        f"Error: {str(e)}"
+                    )
+            
             return result
         
         return wrapper
