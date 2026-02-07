@@ -14,7 +14,26 @@ schema_view = get_schema_view(
     openapi.Info(
         title="Job Board Platform API",
         default_version='v1',
-        description="A comprehensive REST API for a Job Board Platform with role-based access control, job management, and application tracking.",
+        description="""
+## Job Board Platform — REST API Documentation
+
+A comprehensive REST API for a full-featured Job Board Platform.
+
+### Key Features
+- **Role-Based Access Control** — Admin, Employer, and User roles with fine-grained permissions
+- **JWT Authentication** — Secure token-based auth with refresh tokens
+- **Job Management** — Full CRUD with advanced filtering, search, and analytics
+- **Application Tracking** — Multi-stage application pipeline with screening and interviews
+- **Real-time Notifications** — Configurable notification preferences
+- **Data Export** — CSV and JSON export for jobs, applications, and users
+- **Audit Logging** — Complete change history and audit trail
+
+### Authentication
+All protected endpoints require a JWT token in the `Authorization` header:
+```
+Authorization: Bearer <your_access_token>
+```
+""",
         terms_of_service="https://www.google.com/policies/terms/",
         contact=openapi.Contact(email="contact@jobboard.local"),
         license=openapi.License(name="MIT License"),

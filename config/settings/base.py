@@ -327,6 +327,7 @@ CORS_ALLOW_HEADERS = [
 
 # Swagger/OpenAPI Settings
 SWAGGER_SETTINGS = {
+    'DEFAULT_AUTO_SCHEMA_CLASS': 'apps.core.swagger.TaggedAutoSchema',
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
@@ -344,6 +345,9 @@ SWAGGER_SETTINGS = {
         'delete',
         'patch'
     ],
+    'DOC_EXPANSION': 'list',
+    'TAGS_SORTER': 'alpha',
+    'OPERATIONS_SORTER': 'method',
 }
 
 # Logging Configuration
