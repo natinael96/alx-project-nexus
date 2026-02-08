@@ -107,6 +107,8 @@ DATABASES = {
         'PORT': config('DB_PORT', default='5432'),
         # Connection pooling - shorter for cloud databases
         'CONN_MAX_AGE': CONN_MAX_AGE,
+        # Validate connections before reuse (prevents "SSL SYSCALL error: EOF detected")
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 10,
             'options': '-c statement_timeout=30000',  # 30 seconds

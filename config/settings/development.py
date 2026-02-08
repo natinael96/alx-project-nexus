@@ -32,10 +32,14 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.loca
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # Database configuration (can override in .env)
+# Use CONN_MAX_AGE=0 in dev to get a fresh connection each request
+# This prevents "SSL SYSCALL error: EOF detected" with cloud databases
 DATABASES['default'].update({
+    'CONN_MAX_AGE': 0,
+    'CONN_HEALTH_CHECKS': True,
     'OPTIONS': {
         'connect_timeout': 10,
-    }
+    },
 })
 
 # Static files serving in development
