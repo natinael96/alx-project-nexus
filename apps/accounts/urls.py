@@ -2,7 +2,7 @@
 URL configuration for accounts app.
 """
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 from .views_security import (
@@ -15,7 +15,7 @@ from .views_oauth import oauth_login_url, oauth_callback
 
 app_name = 'accounts'
 
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'api-keys', APIKeyViewSet, basename='api-key')
 router.register(r'ip-whitelist', IPWhitelistViewSet, basename='ip-whitelist')
 

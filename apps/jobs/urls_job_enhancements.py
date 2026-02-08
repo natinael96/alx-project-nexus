@@ -2,13 +2,13 @@
 URL configuration for job enhancement endpoints.
 """
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from . import views_job_enhancements
 
 app_name = 'jobs_enhancements'
 
 # Router for ViewSets
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'shares', views_job_enhancements.JobShareViewSet, basename='job-share')
 
 urlpatterns = [

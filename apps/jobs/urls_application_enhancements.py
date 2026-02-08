@@ -2,13 +2,13 @@
 URL configuration for application enhancement endpoints.
 """
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from . import views_application_enhancements
 
 app_name = 'applications_enhancements'
 
 # Router for ViewSets
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'notes', views_application_enhancements.ApplicationNoteViewSet, basename='application-note')
 router.register(r'status-history', views_application_enhancements.ApplicationStatusHistoryViewSet, basename='application-status-history')
 router.register(r'screening-questions', views_application_enhancements.ScreeningQuestionViewSet, basename='screening-question')

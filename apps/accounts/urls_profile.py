@@ -2,13 +2,13 @@
 URL configuration for user profile endpoints.
 """
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from . import views_profile
 
 app_name = 'accounts_profile'
 
 # Router for ViewSets
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'skills', views_profile.SkillViewSet, basename='skill')
 router.register(r'education', views_profile.EducationViewSet, basename='education')
 router.register(r'work-history', views_profile.WorkHistoryViewSet, basename='work-history')

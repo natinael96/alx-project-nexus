@@ -93,21 +93,21 @@ if REDIS_URL:
             'ssl_cert_reqs': ssl.CERT_NONE,
         }
 
-    CACHES = {
-        'default': {
+CACHES = {
+    'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
             'LOCATION': REDIS_URL,
-            'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
-            'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
+        'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
+        'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
             'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'SOCKET_CONNECT_TIMEOUT': 5,
-                'SOCKET_TIMEOUT': 5,
-                'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'SOCKET_CONNECT_TIMEOUT': 5,
+        'SOCKET_TIMEOUT': 5,
+        'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
                 'IGNORE_EXCEPTIONS': False,
-                'CONNECTION_POOL_KWARGS': {
+        'CONNECTION_POOL_KWARGS': {
                     'max_connections': 20,
-                    'retry_on_timeout': True,
+            'retry_on_timeout': True,
                     **redis_options,
                 },
             },

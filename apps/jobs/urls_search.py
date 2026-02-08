@@ -2,13 +2,13 @@
 URL configuration for search endpoints.
 """
 from django.urls import path
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from . import views_search
 
 app_name = 'jobs_search'
 
 # Router for ViewSets
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'saved-searches', views_search.SavedSearchViewSet, basename='saved-search')
 router.register(r'search-alerts', views_search.SearchAlertViewSet, basename='search-alert')
 
