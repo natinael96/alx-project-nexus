@@ -52,9 +52,21 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
         if date_from:
-            queryset = queryset.filter(created_at__gte=date_from)
+            try:
+                from django.utils.dateparse import parse_datetime, parse_date
+                parsed = parse_datetime(date_from) or parse_date(date_from)
+                if parsed:
+                    queryset = queryset.filter(created_at__gte=parsed)
+            except (ValueError, TypeError):
+                pass
         if date_to:
-            queryset = queryset.filter(created_at__lte=date_to)
+            try:
+                from django.utils.dateparse import parse_datetime, parse_date
+                parsed = parse_datetime(date_to) or parse_date(date_to)
+                if parsed:
+                    queryset = queryset.filter(created_at__lte=parsed)
+            except (ValueError, TypeError):
+                pass
         
         return queryset.order_by('-created_at')
 

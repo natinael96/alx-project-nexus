@@ -59,6 +59,9 @@ class AuditLoggingMiddleware(MiddlewareMixin):
             }
             action = action_map.get(request.method, 'other')
             
+            # Build a descriptive object_repr from the request path
+            object_repr = f"{request.method} {request.path}"
+            
             # Log the action
             AuditService.log_action(
                 action=action,
@@ -70,6 +73,7 @@ class AuditLoggingMiddleware(MiddlewareMixin):
                 metadata={
                     'status_code': response.status_code,
                     'content_type': response.get('Content-Type', ''),
+                    'object_repr': object_repr,
                 }
             )
         except Exception as e:

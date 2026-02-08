@@ -54,6 +54,10 @@ class AuditService:
                 content_type = ContentType.objects.get_for_model(obj)
                 object_id = obj.pk
             
+            # Fallback: use request info if no object_repr
+            if not object_repr and request_method and request_path:
+                object_repr = f"{request_method} {request_path}"
+            
             audit_log = AuditLog.objects.create(
                 user=user,
                 action=action,

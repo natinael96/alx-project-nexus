@@ -13,6 +13,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     action_display = serializers.SerializerMethodField()
     content_type_name = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%SZ', read_only=True)
     
     def get_user_name(self, obj):
         return obj.user.username if obj.user else None
@@ -45,6 +46,7 @@ class ChangeHistorySerializer(serializers.ModelSerializer):
     """
     changed_by_name = serializers.SerializerMethodField()
     content_type_name = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%SZ', read_only=True)
     
     def get_changed_by_name(self, obj):
         return obj.changed_by.username if obj.changed_by else None
