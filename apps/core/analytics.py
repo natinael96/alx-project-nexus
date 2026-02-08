@@ -78,7 +78,9 @@ class AnalyticsService:
         recent_applications = Application.objects.filter(applied_at__gte=thirty_days_ago).count()
         
         # Average applications per job
-        avg_applications = Job.objects.aggregate(avg=Avg('applications__id', distinct=True))['avg'] or 0
+        avg_applications = Job.objects.annotate(
+            app_count=Count('applications')
+        ).aggregate(avg=Avg('app_count'))['avg'] or 0
         
         # Jobs with most applications
         top_jobs = Job.objects.annotate(
