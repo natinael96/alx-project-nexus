@@ -186,11 +186,11 @@ urlpatterns = [
     
     # Legacy API endpoints (redirect to v1)
     path('api/auth/', include('apps.accounts.urls')),
-    path('api/jobs/', include('apps.jobs.urls')),
     path('api/jobs/', include('apps.jobs.urls_job_enhancements')),
+    path('api/jobs/', include('apps.jobs.urls')),
     path('api/categories/', include('apps.jobs.urls_category')),
-    path('api/applications/', include('apps.jobs.urls_application')),
     path('api/applications/', include('apps.jobs.urls_application_enhancements')),
+    path('api/applications/', include('apps.jobs.urls_application')),
     path('api/search/', include('apps.jobs.urls_search')),
     path('api/notifications/', include('apps.core.urls_notifications')),
     path('api/export/', include('apps.core.urls_export')),

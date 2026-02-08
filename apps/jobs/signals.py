@@ -42,17 +42,17 @@ def job_post_save_handler(sender, instance, created, **kwargs):
                 pass
     except Exception as e:
         logger.error(f"Error logging audit for job: {e}")
-
+    
     # Invalidate cache
     try:
         invalidate_job_cache(instance.id if not created else None)
     except Exception as e:
         logger.error(f"Failed to invalidate job cache for Job ID {instance.id}: {e}")
-
+    
     # Email notifications
     if created:
         try:
-            EmailService.send_job_posted_confirmation(instance)
+                EmailService.send_job_posted_confirmation(instance)
         except Exception as e:
             logger.error(f"Failed to send job posted confirmation for Job ID {instance.id}: {e}")
     else:
@@ -61,7 +61,7 @@ def job_post_save_handler(sender, instance, created, **kwargs):
             old_instance = sender.objects.get(pk=instance.pk)
             if old_instance.status != instance.status:
                 try:
-                    EmailService.send_job_status_change_notification(instance, old_instance.status)
+                        EmailService.send_job_status_change_notification(instance, old_instance.status)
                 except Exception as e:
                     logger.error(f"Failed to send job status change notification for Job ID {instance.id}: {e}")
         except sender.DoesNotExist:
@@ -84,7 +84,7 @@ def job_post_delete_handler(sender, instance, **kwargs):
         )
     except Exception as e:
         logger.error(f"Error logging audit for job deletion: {e}")
-
+    
     try:
         invalidate_job_cache(instance.id)
     except Exception as e:
@@ -119,7 +119,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                 pass
     except Exception as e:
         logger.error(f"Error logging audit for application: {e}")
-
+    
     if not instance.applicant or not instance.job or not instance.job.employer:
         logger.warning(f"Skipping application email for ID {instance.id} due to missing related data.")
         return
@@ -127,16 +127,16 @@ def application_post_save_handler(sender, instance, created, **kwargs):
     if created:
         # Send application confirmation to applicant
         try:
-            EmailService.send_application_confirmation(instance)
+                EmailService.send_application_confirmation(instance)
         except Exception as e:
             logger.error(f"Failed to send application confirmation for Application ID {instance.id}: {e}")
 
         # Send new application notification to employer
         try:
-            EmailService.send_new_application_notification(instance)
+                EmailService.send_new_application_notification(instance)
         except Exception as e:
             logger.error(f"Failed to send new application notification for Application ID {instance.id}: {e}")
-
+        
         # Create in-app notification for employer
         try:
             from apps.core.notification_service import NotificationService
@@ -152,7 +152,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
             )
         except Exception as e:
             logger.error(f"Failed to create notification for Application ID {instance.id}: {e}")
-
+        
         # Create initial status history
         try:
             from apps.jobs.models_application_enhancements import ApplicationStatusHistory
@@ -172,10 +172,10 @@ def application_post_save_handler(sender, instance, created, **kwargs):
             if old_instance.status != instance.status:
                 # Send email notification
                 try:
-                    EmailService.send_application_status_update(instance, old_instance.status)
+                        EmailService.send_application_status_update(instance, old_instance.status)
                 except Exception as e:
                     logger.error(f"Failed to send application status update for Application ID {instance.id}: {e}")
-
+                
                 # Create in-app notification for applicant
                 try:
                     from apps.core.notification_service import NotificationService
@@ -192,7 +192,7 @@ def application_post_save_handler(sender, instance, created, **kwargs):
                     )
                 except Exception as e:
                     logger.error(f"Failed to create notification for Application ID {instance.id}: {e}")
-
+                
                 # Create status history
                 try:
                     from apps.jobs.models_application_enhancements import ApplicationStatusHistory
@@ -247,7 +247,7 @@ def application_pre_delete_handler(sender, instance, **kwargs):
         )
     except Exception as e:
         logger.error(f"Error logging audit for application deletion: {e}")
-
+    
     try:
         cleanup_application_files(instance)
     except Exception as e:

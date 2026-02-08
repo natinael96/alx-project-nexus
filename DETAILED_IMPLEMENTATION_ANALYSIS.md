@@ -690,7 +690,7 @@
 - Structured logging configuration
 - Log levels per environment
 - Log rotation configuration
-- Error tracking integration (Sentry, etc.)
+- Error tracking integration
 - Performance logging
 - API request/response logging
 

@@ -282,7 +282,6 @@ GET  /api/applications/
    - Disable DEBUG mode
 
 2. **Monitoring:**
-   - Set up error tracking (Sentry)
    - Configure logging aggregation
    - Set up performance monitoring
 

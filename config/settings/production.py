@@ -72,10 +72,7 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jobboard.com'
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in config(
-        'CORS_ALLOWED_ORIGINS',
-        default=''
-    ).split(',')
+    for origin in config('CORS_ALLOWED_ORIGINS', default='').split(',')
     if origin.strip()
 ]
 
@@ -96,10 +93,9 @@ if REDIS_URL:
             'ssl_cert_reqs': ssl.CERT_NONE,
         }
 
-    cache_backend = 'django_redis.cache.RedisCache'
     CACHES = {
         'default': {
-            'BACKEND': cache_backend,
+            'BACKEND': 'django_redis.cache.RedisCache',
             'LOCATION': REDIS_URL,
             'KEY_PREFIX': config('CACHE_KEY_PREFIX', default='jobboard'),
             'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
@@ -128,37 +124,3 @@ else:
             'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),
         }
     }
-
-# --- Sentry Error Tracking ---
-try:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.logging import LoggingIntegration
-    import logging
-
-    SENTRY_DSN = config('SENTRY_DSN', default='')
-    if SENTRY_DSN:
-        sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            integrations=[
-                DjangoIntegration(
-                    transaction_style='url',
-                    middleware_spans=True,
-                    signals_spans=True,
-                ),
-                LoggingIntegration(
-                    level=logging.INFO,
-                    event_level=logging.ERROR,
-                ),
-            ],
-            traces_sample_rate=config('SENTRY_TRACES_SAMPLE_RATE', default=0.1, cast=float),
-            send_default_pii=True,
-            environment=config('ENVIRONMENT', default='production'),
-            release=config('RELEASE_VERSION', default='1.0.0'),
-        )
-except ImportError:
-    pass
-except Exception as e:
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Sentry initialization failed: {str(e)}")

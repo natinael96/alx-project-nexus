@@ -160,28 +160,7 @@ A comprehensive logging and monitoring system has been implemented for the Job B
 
 ## 🚨 Error Tracking
 
-### ✅ Sentry Integration
-
-**Location**: `config/settings/production.py`
-
-**Features:**
-- Automatic error tracking
-- Performance monitoring
-- User context tracking
-- Environment and release tracking
-- Configurable sample rate
-
-**Configuration:**
-```python
-SENTRY_DSN = config('SENTRY_DSN', default='')
-SENTRY_TRACES_SAMPLE_RATE = config('SENTRY_TRACES_SAMPLE_RATE', default=0.1, cast=float)
-ENVIRONMENT = config('ENVIRONMENT', default='production')
-RELEASE_VERSION = config('RELEASE_VERSION', default='1.0.0')
-```
-
-**Integrations:**
-- Django Integration (transactions, middleware spans, signals)
-- Logging Integration (breadcrumbs and events)
+Error tracking is handled via Django's built-in logging framework. All errors are captured by the logging middleware and output to the console (visible in Heroku logs via `heroku logs --tail`).
 
 ---
 
@@ -233,7 +212,6 @@ RELEASE_VERSION = config('RELEASE_VERSION', default='1.0.0')
 
 - Console logging (for container logs)
 - File logging with rotation
-- Error tracking via Sentry
 - Performance monitoring enabled
 - Structured JSON logging
 
@@ -301,9 +279,6 @@ Add to `.env` file:
 LOG_LEVEL=INFO
 DB_LOG_LEVEL=WARNING
 
-# Sentry (Optional)
-SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
-SENTRY_TRACES_SAMPLE_RATE=0.1
 ENVIRONMENT=production
 RELEASE_VERSION=1.0.0
 ```
@@ -334,7 +309,7 @@ All log files are stored in `logs/` directory:
 2. **Log Rotation**: Prevents disk space issues
 3. **Separate Log Files**: Organized by purpose
 4. **Performance Tracking**: Identifies slow requests
-5. **Error Tracking**: Sentry integration for production
+5. **Error Tracking**: Django logging captures all errors
 6. **Health Checks**: Kubernetes/Docker ready
 7. **Analytics**: Comprehensive statistics for admins
 
@@ -446,7 +421,7 @@ All log files are stored in `logs/` directory:
 - ✅ Health check endpoints
 - ✅ Analytics service
 - ✅ Statistics endpoints
-- ✅ Sentry error tracking integration
+- ✅ Error tracking via Django logging
 - ✅ System resource monitoring (disk, memory)
 
 ### Ready for Production ✅

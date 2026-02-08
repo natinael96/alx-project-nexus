@@ -144,6 +144,7 @@ class JobViewSet(viewsets.ModelViewSet):
     """
     queryset = Job.objects.select_related('category', 'employer').prefetch_related('applications')
     permission_classes = [IsAuthenticatedOrReadOnly]
+    lookup_value_regex = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = JobFilter
     search_fields = ['title', 'description', 'requirements', 'location']
@@ -392,6 +393,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     - Job status validation (active jobs only)
     - Status transition validation
     """
+    lookup_value_regex = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
     queryset = Application.objects.select_related('job', 'applicant', 'job__employer')
     permission_classes = [IsAuthenticated, CanApplyForJob]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
